@@ -3,9 +3,8 @@ package Mouffette::Commands;
 use 5.010001;
 use strict;
 use warnings;
-use AnyEvent::HTTP;
-use Data::Dumper;
 require Exporter;
+
 
 our @ISA = qw(Exporter);
 
@@ -16,6 +15,11 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(parse_cmd);
 
 our $VERSION = '0.01';
+
+use AnyEvent::HTTP;
+use Data::Dumper;
+use Mouffette::Utils qw/bot_fast_reply/;
+use Mouffette::Feeds qw/validate_feed/;
 
 =head2 execute_cmd($connection, $msg);
 
@@ -32,6 +36,10 @@ my %commands = (
 		help => {
 			 help => "help <arg>: get the help string for <arg>",
 			 call => \&give_help,
+			},
+		feed => {
+			 help => "feed <url>: validate the feed at <url>",
+			 call => \&validate_feed,
 			}
 	    );
 
@@ -62,19 +70,11 @@ sub give_help {
   if ($arg && (exists $commands{$arg})) {
     $answer = $commands{$arg}->{help};
   } else {
-    $answer = "Available commands: " . join(",", sort(keys %commands));
+    $answer = "Available commands: " . join(", ", sort(keys %commands));
   }
   bot_fast_reply($con, $msg, $answer);
 }
 
-
-sub bot_fast_reply {
-  my ($con, $msg, $what) = @_;
-  return unless defined $what;
-  my $reply = $msg->make_reply;
-  $reply->add_body($what);
-  $reply->send($con);
-}
 
 
 1;

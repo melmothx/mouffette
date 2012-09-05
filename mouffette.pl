@@ -11,8 +11,9 @@ use AnyEvent::XMPP::IM::Connection;
 use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
-use Mouffette::Feeds qw/rss_loop/;
+# use Mouffette::Feeds qw/rss_loop/;
 use Mouffette::Commands qw/parse_cmd/;
+
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
@@ -38,7 +39,7 @@ $cl->reg_cb (
 	       my ($con, $acc) = @_;
 	       debug_print("session ready, starting watcher!");
 	       $w = AE::timer 0, $interval, sub {
-		 rss_loop("watching");
+		 print "watching";
 	       };
 	     },
 	     connect => sub {
