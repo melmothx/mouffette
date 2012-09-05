@@ -10,15 +10,20 @@ use AnyEvent;
 use AnyEvent::XMPP::IM::Connection;
 use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
+use lib './lib';
+use Mouffette::Feeds qw/rss_loop/;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
 
 my $debug = 1;
 my $conf = LoadFile($ARGV[0]);
-my $loop = AnyEvent->condvar;
+
+# INITIALIZATION
+pid_print("bot.pid");
 
 # connection loop
+my $loop = AnyEvent->condvar;
 my $cl = AnyEvent::XMPP::IM::Connection->new (%{$conf->{connection}});
 my $w; # the watcher;
 my $interval = $conf->{bot}->{loopinterval};
@@ -32,7 +37,7 @@ $cl->reg_cb (
 	       my ($con, $acc) = @_;
 	       debug_print("session ready, starting watcher!");
 	       $w = AE::timer 0, $interval, sub {
-		 debug_print("watching");
+		 rss_loop("watching");
 	       };
 	     },
 	     connect => sub {
@@ -104,4 +109,11 @@ sub debug_print {
     my $time = localtime();
     print "[$time] ", @_, "\n";
   }
+}
+
+sub pid_print {
+  my $pidfile = shift || "bot.pid";
+  open (my $fh, ">", $pidfile) or die "Can't write pid file: $!\n";
+  print $fh $$;
+  close $fh;
 }
