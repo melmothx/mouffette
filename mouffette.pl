@@ -12,6 +12,7 @@ use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
 use Mouffette::Feeds qw/rss_loop/;
+use Mouffette::Commands qw/parse_cmd/;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
@@ -91,10 +92,9 @@ $cl->reg_cb (
 	     },
 	     message => sub {
 	       my ($con, $msg) = @_;
-	       my $reply = $msg->make_reply;
-	       $reply->add_body("Please don't message me, I'm just a bot");
-	       $reply->send($con);
-	       debug_print("Message from ", $msg->from, ":\n", $msg->any_body);
+	       parse_cmd($con, $msg);
+	       debug_print("Message from ", $msg->from, ":\n",
+			   $msg->any_body);
 	     },
 	    );
 $cl->connect();
@@ -102,7 +102,9 @@ $loop->recv;
 # here we're out of the loop (hopefully);
 $ENV{PATH} = "/bin:/usr/bin"; # Minimal PATH.
 my @command = ('perl', $0, @ARGV);
-exec @command or die "can't exec myself: $!";
+exec @command or die "can't exec myself: $!\n";
+
+## tiny helpers. Everything more serious should go in a module under ./lib
 
 sub debug_print {
   if ($debug) {
