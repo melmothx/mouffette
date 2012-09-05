@@ -1,0 +1,10 @@
+# these parameters are passed to the Connection ob
+connection:
+  jid: 'user@host.tld'
+  password: 'myP4zzW0rd'
+  resource: 'AnyEvent::XMPP::Devel'
+  connect_timeout: 300
+bot:
+  loopinterval: 60
+  db: mybot.db
+
