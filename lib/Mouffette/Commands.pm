@@ -25,8 +25,14 @@ with the provided arguments.
 =cut
 
 my %commands = (
-		download => \&download,
-		help => \&give_help,
+		download => {
+			     help => "download <url>: get the HTTP headers for <url>",
+			     call => \&download,
+			    },
+		help => {
+			 help => "help <arg>: get the help string for <arg>",
+			 call => \&give_help,
+			}
 	    );
 
 
@@ -34,12 +40,10 @@ sub parse_cmd {
   my ($con, $msg) = @_;
   my @args = split(/\s+/, $msg->any_body);
   my $cmd = shift @args;
-  if ($cmd && $commands{$cmd} ) {
-    $commands{$cmd}->($con, $msg, @args);
+  if ($cmd && (exists $commands{$cmd})) {
+    $commands{$cmd}->{call}->($con, $msg, @args);
   } else {
-    my $reply = $msg->make_reply;
-    $reply->add_body("command not supported");
-    $reply->send($con);
+    give_help($con, $msg);
   }
 }
 
@@ -48,18 +52,30 @@ sub download {
   return unless $url;
   http_get $url, sub {
     my ($body, $hdr) = @_;
-    my $reply = $msg->make_reply;
-    $reply->add_body(Dumper($hdr));
-    $reply->send($con);
+    bot_fast_reply($con, $msg, Dumper($hdr));
   }
 }
 
 sub give_help {
-  my ($con, $msg) = @_;
+  my ($con, $msg, $arg) = @_;
+  my $answer;
+  if ($arg && (exists $commands{$arg})) {
+    $answer = $commands{$arg}->{help};
+  } else {
+    $answer = "Available commands: " . join(",", sort(keys %commands));
+  }
+  bot_fast_reply($con, $msg, $answer);
+}
+
+
+sub bot_fast_reply {
+  my ($con, $msg, $what) = @_;
+  return unless defined $what;
   my $reply = $msg->make_reply;
-  $reply->add_body(join(" ", sort(keys %commands)));
+  $reply->add_body($what);
   $reply->send($con);
 }
 
 
 1;
+
