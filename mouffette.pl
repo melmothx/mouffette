@@ -30,6 +30,39 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
 		       { AutoCommit => 1, })
   or die "Can't open connection to the db\n";
 $dbh->do('PRAGMA foreign_keys = ON;');
+# INITIALIZE THE DB
+
+my $dbschema = << 'MYSCHEMA';
+CREATE TABLE IF NOT EXISTS feeds (
+       handle	VARCHAR(30) PRIMARY KEY NOT NULL,	
+       etag	VARCHAR(100),
+       url 	TEXT UNIQUE NOT NULL);
+
+CREATE TABLE IF NOT EXISTS assoc (
+       id       INT PRIMARY KEY,
+       jid   	VARCHAR(150) NOT NULL,
+       handle 	VARCHAR(30)  NOT NULL,
+       CONSTRAINT jidhandle UNIQUE (jid, handle),
+       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
+
+CREATE TABLE IF NOT EXISTS feeditems (
+       id    	INT PRIMARY KEY,
+       date 	INT,
+       handle   VARCHAR(30) NOT NULL,
+       title    VARCHAR(255),
+       url	TEXT UNIQUE NOT NULL,
+       body 	TEXT NOT NULL,
+       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
+
+CREATE TABLE IF NOT EXISTS queue (
+       id    	INT PRIMARY KEY,
+       handle 	VARCHAR(30) NOT NULL,
+       jid	VARCHAR(150) NOT NULL,
+       body 	TEXT NOT NULL,
+       FOREIGN KEY(jid) REFERENCES assoc(jid),
+       FOREIGN KEY(handle) REFERENCES feeds(handle));
+MYSCHEMA
+$dbh->do($dbschema) or warn $dbh->errstr;
 
 # connection loop
 my $loop = AnyEvent->condvar;
