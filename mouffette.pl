@@ -115,7 +115,7 @@ $SIG{'QUIT'} = \&safe_exit;
 
 
 $loop->recv;
-$dbh->disconnect;
+$dbh->disconnect or warn $dbh->errstr;
 # here we're out of the loop (hopefully);
 $ENV{PATH} = "/bin:/usr/bin"; # Minimal PATH.
 my @command = ('perl', $0, @ARGV);
@@ -124,7 +124,7 @@ exec @command or die "can't exec myself: $!\n";
 sub safe_exit {
   my ($sig) = shift;
   print "Caught a SIG$sig... ";
-  $dbh->disconnect or warn "Disconnection failed\n";
+  $dbh->disconnect or warn $dbh->errstr;
   print "DB disconnected, exiting cleanly\n";
   exit(0);
 }
