@@ -30,39 +30,37 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
 		       { AutoCommit => 1, })
   or die "Can't open connection to the db\n";
 $dbh->do('PRAGMA foreign_keys = ON;');
+
 # INITIALIZE THE DB
-
-my $dbschema = << 'MYSCHEMA';
-CREATE TABLE IF NOT EXISTS feeds (
+$dbh->do('CREATE TABLE IF NOT EXISTS feeds (
        handle	VARCHAR(30) PRIMARY KEY NOT NULL,	
-       etag	VARCHAR(100),
-       url 	TEXT UNIQUE NOT NULL);
-
-CREATE TABLE IF NOT EXISTS assoc (
-       id       INT PRIMARY KEY,
+       url 	TEXT UNIQUE NOT NULL);');
+$dbh->do('CREATE TABLE IF NOT EXISTS gets (
+          url    TEXT UNIQUE NOT NULL,
+          etag   TEXT,
+          time   TEXT,
+          FOREIGN KEY(url) REFERENCES feeds(url) ON DELETE CASCADE);');
+$dbh->do('CREATE TABLE IF NOT EXISTS assoc (
+       id       INTEGER PRIMARY KEY,
        jid   	VARCHAR(150) NOT NULL,
        handle 	VARCHAR(30)  NOT NULL,
        CONSTRAINT jidhandle UNIQUE (jid, handle),
-       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
-
-CREATE TABLE IF NOT EXISTS feeditems (
-       id    	INT PRIMARY KEY,
-       date 	INT,
+       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);');
+$dbh->do('CREATE TABLE IF NOT EXISTS feeditems (
+       id    	INTEGER PRIMARY KEY,
+       date 	INTEGER,
        handle   VARCHAR(30) NOT NULL,
        title    VARCHAR(255),
        url	TEXT UNIQUE NOT NULL,
        body 	TEXT NOT NULL,
-       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
-
-CREATE TABLE IF NOT EXISTS queue (
-       id    	INT PRIMARY KEY,
+       FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);');
+$dbh->do('CREATE TABLE IF NOT EXISTS queue (
+       id    	INTEGER PRIMARY KEY,
        handle 	VARCHAR(30) NOT NULL,
        jid	VARCHAR(150) NOT NULL,
        body 	TEXT NOT NULL,
        FOREIGN KEY(jid) REFERENCES assoc(jid),
-       FOREIGN KEY(handle) REFERENCES feeds(handle));
-MYSCHEMA
-$dbh->do($dbschema) or warn $dbh->errstr;
+       FOREIGN KEY(handle) REFERENCES feeds(handle));');
 
 # connection loop
 my $loop = AnyEvent->condvar;

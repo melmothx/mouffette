@@ -38,7 +38,7 @@ my %commands = (
 			 call => \&give_help,
 			},
 		feed => {
-			 help => "feed <url>: validate the feed at <url>",
+			 help => "feed <alias> <url>: subscribe the feed locate at <url> and give it an alias <alias>. E.g. feed library http://theanarchistlibrary.org/rss.xml",
 			 call => \&validate_feed,
 			}
 	    );
