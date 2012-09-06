@@ -45,18 +45,18 @@ my %commands = (
 
 
 sub parse_cmd {
-  my ($con, $msg) = @_;
+  my ($con, $msg, $dbh) = @_;
   my @args = split(/\s+/, $msg->any_body);
   my $cmd = shift @args;
   if ($cmd && (exists $commands{$cmd})) {
-    $commands{$cmd}->{call}->($con, $msg, @args);
+    $commands{$cmd}->{call}->($con, $msg, $dbh, @args);
   } else {
     give_help($con, $msg);
   }
 }
 
 sub download {
-  my ($con, $msg, $url) = @_;
+  my ($con, $msg, $dbh, $url) = @_;
   return unless $url;
   http_get $url, sub {
     my ($body, $hdr) = @_;
@@ -65,7 +65,7 @@ sub download {
 }
 
 sub give_help {
-  my ($con, $msg, $arg) = @_;
+  my ($con, $msg, $dbh, $arg) = @_;
   my $answer;
   if ($arg && (exists $commands{$arg})) {
     $answer = $commands{$arg}->{help};

@@ -21,7 +21,7 @@ use XML::Feed;
 use Mouffette::Utils qw/bot_fast_reply/;
 
 sub validate_feed {
-  my ($con, $msg, $url) = @_;
+  my ($con, $msg, $dbh, $url) = @_;
   return 0 unless $url;
   http_get $url, sub {
     my ($data, $hdr) = @_;

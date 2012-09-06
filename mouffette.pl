@@ -13,7 +13,7 @@ use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
 # use Mouffette::Feeds qw/rss_loop/;
 use Mouffette::Commands qw/parse_cmd/;
-
+use DBI;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
@@ -24,12 +24,18 @@ my $conf = LoadFile($ARGV[0]);
 # INITIALIZATION
 pid_print("bot.pid");
 
+# the DB
+my $db = $conf->{bot}->{db};
+my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
+		       { AutoCommit => 1, })
+  or die "Can't open connection to the db\n";
+$dbh->do('PRAGMA foreign_keys = ON;');
+
 # connection loop
 my $loop = AnyEvent->condvar;
 my $cl = AnyEvent::XMPP::IM::Connection->new (%{$conf->{connection}});
 my $w; # the watcher;
 my $interval = $conf->{bot}->{loopinterval};
-my $db = $conf->{bot}->{db};
 
 # Callback functions. The first argument to each callback is always
 # the AnyEvent::XMPP::IM::Connection object itself.
@@ -93,13 +99,14 @@ $cl->reg_cb (
 	     },
 	     message => sub {
 	       my ($con, $msg) = @_;
-	       parse_cmd($con, $msg);
-	       debug_print("Message from ", $msg->from, ":\n",
+	       debug_print("Parsing message from ", $msg->from, ":\n",
 			   $msg->any_body);
+	       parse_cmd($con, $msg, $dbh);
 	     },
 	    );
 $cl->connect();
 $loop->recv;
+$dbh->disconnect;
 # here we're out of the loop (hopefully);
 $ENV{PATH} = "/bin:/usr/bin"; # Minimal PATH.
 my @command = ('perl', $0, @ARGV);
