@@ -73,6 +73,11 @@ $cl->reg_cb (
 	     },
 
 	     # CONTACT MANAGING
+	     presence_update => sub {
+	       my ($con, $roster, $contact, $oldpres, $newpres) = @_;
+	       debug_print ("Presence update ", $contact->jid, ": ",
+			    show_pres($newpres));
+	     },
 	     contact_request_subscribe => sub {
 	       my ($con, $roster, $contact, $message) = @_;
 	       $contact->send_subscribed;
@@ -139,3 +144,18 @@ sub pid_print {
   print $fh $$;
   close $fh;
 }
+
+
+sub show_pres {
+  my $pres = shift;
+  my $string;
+  if (not defined $pres) {
+    $string = "offline";
+  } elsif (not $pres->show) {
+    $string = "available";
+  } else {
+    $string = $pres->show;
+  }
+  return $string;
+}
+
