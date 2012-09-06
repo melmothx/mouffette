@@ -99,8 +99,7 @@ $cl->reg_cb (
 	     },
 	     message => sub {
 	       my ($con, $msg) = @_;
-	       debug_print("Parsing message from ", $msg->from, ":\n",
-			   $msg->any_body);
+	       debug_print("From ", $msg->from, ": ", $msg->any_body);
 	       parse_cmd($con, $msg, $dbh);
 	     },
 	    );
