@@ -11,7 +11,7 @@ our @ISA = qw(Exporter);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-our @EXPORT_OK = qw(validate_feed);
+our @EXPORT_OK = qw(validate_feed unsubscribe_feed);
 
 our $VERSION = '0.01';
 
@@ -20,6 +20,39 @@ use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use XML::Feed;
 use Mouffette::Utils qw/bot_fast_reply/;
+
+sub unsubscribe_feed {
+  my ($con, $msg, $dbh, $handle) = @_;
+  my $jid = bare_jid($msg->from);
+
+  # check
+  my $assoccheck =
+    $dbh->prepare('SELECT * FROM assoc WHERE handle = ? AND jid = ?;');
+  $assoccheck->execute($handle, $jid);
+  unless ($assoccheck->fetchrow_array) {
+    return bot_fast_reply($con, $msg, "You are not subscribed to $handle");
+  };
+
+  # delete
+  my $sth =
+    $dbh->prepare('DELETE FROM assoc WHERE handle = ? AND jid = ?;');
+  $sth->execute($handle, $jid);
+  # usual error checking
+  if (my $error = $sth->err) {
+    return bot_fast_reply($con, $msg, "Cannot unsubscribe: $error");
+  }
+  bot_fast_reply($con, $msg, "you're unsubscribed from $handle now");
+
+  # if it's empty, clean it
+  my $check = $dbh->prepare('SELECT handle FROM assoc WHERE handle = ?');
+  $check->execute($handle);
+  unless ($check->fetchrow_array) {
+    my $clean = $dbh->prepare('DELETE FROM feeds WHERE handle = ?');
+    $clean->execute($handle);
+    print "Purged feeds from $handle\n";
+  }
+}
+
 
 sub validate_feed {
   my ($con, $msg, $dbh, $handle, $url) = @_;

@@ -19,7 +19,9 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use Data::Dumper;
 use Mouffette::Utils qw/bot_fast_reply/;
-use Mouffette::Feeds qw/validate_feed/;
+use Mouffette::Feeds qw/validate_feed
+			unsubscribe_feed/;
+
 
 =head2 execute_cmd($connection, $msg);
 
@@ -40,7 +42,11 @@ my %commands = (
 		feed => {
 			 help => "feed <alias> <url>: subscribe the feed locate at <url> and give it an alias <alias>. E.g. feed library http://theanarchistlibrary.org/rss.xml",
 			 call => \&validate_feed,
-			}
+			},
+		unsub => {
+			  help => "unsub <alias>: unsubscribe the feed know as <alias>",
+			  call => \&unsubscribe_feed,
+			 },
 	    );
 
 
