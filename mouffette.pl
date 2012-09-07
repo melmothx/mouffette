@@ -29,7 +29,8 @@ my $db = $conf->{bot}->{db};
 
 # ok, little hack until I don't understand how to do it better:
 unless (-f $db) {
-  system("sqlite3 $db < schema.sql");
+  system("sqlite3 $db < schema.sql") == 0 or die "Cannot init the db\n";
+  print "DB not existent, initialized\n";
 }
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
