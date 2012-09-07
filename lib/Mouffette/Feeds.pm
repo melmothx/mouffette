@@ -23,7 +23,7 @@ use XML::Feed;
 use Mouffette::Utils qw/bot_fast_reply/;
 
 sub list_feeds {
-  my ($con, $msg, $jid, $dbh) = @_;
+  my ($form, $jid, $dbh) = @_;
   my $list = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?');
   $list->execute($jid);
   my @subscribed;
@@ -36,17 +36,17 @@ sub list_feeds {
   } else {
     $reply = "No subscriptions";
   }
-  bot_fast_reply($con, $msg, $reply);
+  $form->($reply);
 }
 
 sub unsubscribe_feed {
-  my ($con, $msg, $jid, $dbh, $handle) = @_;
+  my ($form, $jid, $dbh, $handle) = @_;
   # check
   my $assoccheck =
     $dbh->prepare('SELECT * FROM assoc WHERE handle = ? AND jid = ?;');
   $assoccheck->execute($handle, $jid);
   unless ($assoccheck->fetchrow_array) {
-    return bot_fast_reply($con, $msg, "You are not subscribed to $handle");
+    return $form->("You are not subscribed to $handle");
   };
 
   # delete
@@ -55,9 +55,9 @@ sub unsubscribe_feed {
   $sth->execute($handle, $jid);
   # usual error checking
   if (my $error = $sth->err) {
-    return bot_fast_reply($con, $msg, "Cannot unsubscribe: $error");
+    return $form->("Cannot unsubscribe: $error");
   }
-  bot_fast_reply($con, $msg, "you're unsubscribed from $handle now");
+  $form->("you're unsubscribed from $handle now");
 
   # if it's empty, clean it
   my $check = $dbh->prepare('SELECT handle FROM assoc WHERE handle = ?');
@@ -71,10 +71,10 @@ sub unsubscribe_feed {
 
 
 sub validate_feed {
-  my ($con, $msg, $jid, $dbh, $handle, $url) = @_;
+  my ($form, $jid, $dbh, $handle, $url) = @_;
   # sanity check
   unless ($handle and $url) {
-    return bot_fast_reply($con, $msg, "Invalid arguments. See the help");
+    return $form->("Invalid arguments. See the help");
   }
 
   my $sthcheck =
@@ -85,16 +85,15 @@ sub validate_feed {
 
   $sthcheck->execute($url, $handle);
   if (my $checkerror = $sthcheck->err) {
-    return bot_fast_reply($con, $msg, $checkerror);
+    return $form->($checkerror);
   }
   # handle or url already present?
   if (my @feedrow = $sthcheck->fetchrow_array()) {
     ($handle, $url) = @feedrow;
     # yes? ok, add the association and notify.
     $sthassc->execute($handle, $jid);
-    bot_fast_reply($con, $msg,
-		   "Feed already present: you're subscribed to " . 
-		   "$handle ($url) now");
+    $form->("Feed already present: you're subscribed to " . 
+	    "$handle ($url) now");
   } else {
     # fetch the feed. Everything is passed to the AnyEvent::HTTP
     # closure. Who knows if we get leaks doing so
@@ -102,21 +101,20 @@ sub validate_feed {
       my ($data, $hdr) = @_;
       # check if it's valid
       unless ($hdr->{Status} eq "200") {
-	return bot_fast_reply($con, $msg, "Feed failed: " . $hdr->{Reason});
+	return $form->("Feed failed: " . $hdr->{Reason});
       }
       # and it parses cleanly
       my $feed = XML::Feed->parse(\$data) or
-	return bot_fast_reply($con, $msg, "Feed failed: " . XML::Feed->errstr);
+	return $form->("Feed failed: " . XML::Feed->errstr);
       # ok, all seems valid.
       $sthfeed->execute($handle, $url);
       $sthassc->execute($handle, $jid);
       $sthhttp->execute($url);
       if (my $error = $sthfeed->err || $sthassc->err || $sthhttp->err) {
-	bot_fast_reply($con, $msg, "errors: $error");
+	$form->("errors: $error");
       } else {
-	bot_fast_reply($con, $msg,
-		       "Feed from $url, with title " . $feed->title .
-		       " subscribed as " . $handle);
+	$form->("Feed from $url, with title " . $feed->title .
+		" subscribed as " . $handle);
       }
     };
   }

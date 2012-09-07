@@ -19,7 +19,6 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
-use Mouffette::Utils qw/bot_fast_reply/;
 use Mouffette::Feeds qw/validate_feed
 			list_feeds
 			unsubscribe_feed/;
@@ -61,31 +60,41 @@ sub parse_cmd {
   my @args = split(/\s+/, $msg->any_body);
   my $cmd = shift @args;
   my $jid = bare_jid($msg->from);
+  # closure with the code to send a message. Basically, we know that
+  # the command wants an answer, so we pack $con, $msg there and pass
+  # it, along with the bare jid for db operations
+  my $form = sub {
+    my $what = shift;
+    return unless ((defined $what) and ($what ne ""));
+    my $reply = $msg->make_reply;
+    $reply->add_body($what);
+    $reply->send($con);
+  };
   if ($cmd && (exists $commands{$cmd})) {
-    $commands{$cmd}->{call}->($con, $msg, $jid, $dbh, @args);
+    $commands{$cmd}->{call}->($form, $jid, $dbh, @args);
   } else {
-    give_help($con, $msg);
+    give_help($form);
   }
 }
 
 sub download {
-  my ($con, $msg, $jid, $dbh, $url) = @_;
+  my ($form, $jid, $dbh, $url) = @_;
   return unless $url;
   http_get $url, sub {
     my ($body, $hdr) = @_;
-    bot_fast_reply($con, $msg, Dumper($hdr));
+    $form->(Dumper($hdr));
   }
 }
 
 sub give_help {
-  my ($con, $msg, $jid, $dbh, $arg) = @_;
+  my ($form, $jid, $dbh, $arg) = @_;
   my $answer;
   if ($arg && (exists $commands{$arg})) {
     $answer = $commands{$arg}->{help};
   } else {
     $answer = "Available commands: " . join(", ", sort(keys %commands));
   }
-  bot_fast_reply($con, $msg, $answer);
+  $form->($answer);
 }
 
 
