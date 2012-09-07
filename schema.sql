@@ -28,6 +28,5 @@ CREATE TABLE IF NOT EXISTS queue (
        handle 	VARCHAR(30) NOT NULL,
        jid	VARCHAR(150) NOT NULL,
        body 	TEXT NOT NULL,
-       FOREIGN KEY(jid) REFERENCES assoc(jid),
        FOREIGN KEY(handle) REFERENCES feeds(handle));
 
