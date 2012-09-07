@@ -126,16 +126,26 @@ sub validate_feed {
 sub fetch_feeds {
   my $dbh = shift;
   # get the feeds we need to fetch
-  my $sthlist = $dbh->prepare('SELECT handle, url FROM feeds;');
+  my $query = q{
+     SELECT feeds.handle, feeds.url, gets.etag, gets.time
+     FROM feeds INNER JOIN gets ON feeds.url=gets.url
+     ORDER BY feeds.handle;};
+  my $sthlist = $dbh->prepare($query);
   $sthlist->execute;
   my $targets = $sthlist->fetchall_arrayref;
   while (@$targets) {
-    my ($handle, $url) = @{shift @$targets};
-    http_get $url, sub {
+    # now we prepare the code to do a conditional get, to save resources
+    my ($handle, $url, $etag, $time) = @{shift @$targets};
+    my %myheaders = ( 'User-Agent' => "Mouffette RSS->XMPP gateway v.0.1"  );
+    if ($etag) {
+      $myheaders{'If-None-Match'} = $etag;
+    } elsif ($time) {
+      $myheaders{'If-Modified-Since'} = $time;
+    };
+    http_get $url, headers => \%myheaders, sub {
       my ($data, $hdr) = @_;
-      print Dumper($hdr);
       if ($hdr->{Status} eq "200") {
-  	print "Got $handle!";
+  	print "Got $handle!\n";
 	insert_feeds($dbh, $handle, $data, $hdr);
       } else {
   	print "$handle => $hdr->{Status}\n";
@@ -146,7 +156,13 @@ sub fetch_feeds {
 
 sub insert_feeds {
   my ($dbh, $handle, $data, $hdr) = @_;
-  print "Insertion into $handle...";
+  # first thing (or last thing, I'm not sure)
+  my $updatequery = q{
+UPDATE gets SET etag = ?, time = ?
+WHERE url = (SELECT url FROM feeds WHERE handle = ?);
+};
+  my $updategets = $dbh->prepare($updatequery);
+  $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
   return;
 }
 
