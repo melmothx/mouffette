@@ -188,7 +188,7 @@ sub insert_feeds {
   my $insertion = $dbh->prepare($insquery);
 
   # delete the ones which are no more
-  my $delquery = 'DELETE FROM feeditems WHERE url = ?';
+  my $delquery = 'DELETE FROM feeditems WHERE url = ? AND send = 0';
   my $deletion = $dbh->prepare($delquery);
 
   # do
