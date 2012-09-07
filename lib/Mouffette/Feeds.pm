@@ -20,7 +20,6 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use Data::Dumper;
 use XML::Feed;
-use Mouffette::Utils qw/bot_fast_reply/;
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
