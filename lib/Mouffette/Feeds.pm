@@ -328,7 +328,6 @@ sub check_unzip_broken_server {
       # we modify the referenced scalar
       $$gzipped = $uncompressed;
       undef $uncompressed;
-      print $$gzipped, "done\n";
     } else {
       print "but uncompressing failed\n";
     }
