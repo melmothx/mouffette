@@ -165,15 +165,53 @@ sub insert_feeds {
   # create a hashref with url => { key => value  }
   my $items = xml_feed_parse($handle, $data);
   return unless $items;
-  print Dumper($items);
-  # debug
-  return;
-  # finally, update the gets
+
+  # { 'permalink' => {
+  # 		  'body' => 'bla',
+  # 		  'handle' => 'lib',
+  # 		  'date' => 1345011030,
+  # 		  'url' => 'permalink',
+  # 		  'title' => 'My title'
+  # 		   }, { ... }, { ... }}
+
+  # now we check if the feeds already exist (based on the permalink)
+  my $permalinks = $dbh->prepare('SELECT url FROM feeditems where handle = ?');
+  $permalinks->execute($handle);
+  my %exist;
+  while (my @links = $permalinks->fetchrow_array) {
+    $exist{$links[0]} = 1;
+  };
+  # insert code
+  my $insquery = 'INSERT INTO feeditems
+     (date, handle, title, url, body, send) VALUES
+     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  1  );';
+  my $insertion = $dbh->prepare($insquery);
+
+  # delete the ones which are no more
+  my $delquery = 'DELETE FROM feeditems WHERE url = ?';
+  my $deletion = $dbh->prepare($delquery);
+
+  # do
+  foreach my $permalink (keys %$items) {
+    $insertion->execute(
+			$items->{$permalink}->{date},
+			$items->{$permalink}->{handle},
+			$items->{$permalink}->{title},
+			$items->{$permalink}->{url},
+			$items->{$permalink}->{body}
+		       ) unless $exist{$permalink};
+  };
+  foreach my $oldlink (keys %exist) {
+    $deletion->execute($oldlink)
+      unless $items->{$oldlink};
+  }
+  # and finally, update the gets
   my $updatequery = q{
      UPDATE gets SET etag = ?, time = ?
      WHERE url = (SELECT url FROM feeds WHERE handle = ?);};
   my $updategets = $dbh->prepare($updatequery);
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
+  print "Done with fetching $handle\n";
   return;
 }
 
