@@ -23,6 +23,7 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use Data::Dumper;
 use XML::Feed;
+use HTML::PullParser;
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
@@ -123,6 +124,10 @@ sub validate_feed {
 }
 
 
+####################################################################
+#                     FETCHING                                     #
+####################################################################
+
 sub fetch_feeds {
   my $dbh = shift;
   # get the feeds we need to fetch
@@ -146,7 +151,7 @@ sub fetch_feeds {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
   	print "Got $handle!\n";
-	insert_feeds($dbh, $handle, $data, $hdr);
+	insert_feeds($dbh, $handle, \$data, $hdr);
       } else {
   	print "$handle => $hdr->{Status}\n";
       }
@@ -156,15 +161,89 @@ sub fetch_feeds {
 
 sub insert_feeds {
   my ($dbh, $handle, $data, $hdr) = @_;
-  # first thing (or last thing, I'm not sure)
+  # data here is actually a reference to a scalar
+  # create a hashref with url => { key => value  }
+  my $items = xml_feed_parse($handle, $data);
+  return unless $items;
+  print Dumper($items);
+  # debug
+  return;
+  # finally, update the gets
   my $updatequery = q{
-UPDATE gets SET etag = ?, time = ?
-WHERE url = (SELECT url FROM feeds WHERE handle = ?);
-};
+     UPDATE gets SET etag = ?, time = ?
+     WHERE url = (SELECT url FROM feeds WHERE handle = ?);};
   my $updategets = $dbh->prepare($updatequery);
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
   return;
 }
+
+sub xml_feed_parse {
+  my ($handle, $data) = @_;
+  my $feed = XML::Feed->parse($data);
+  unless ($feed) {
+    print "Error on $handle: ", XML::Feed->errstr, "\n";
+    return;
+  }
+  my %items;
+  # create a hashref with url => { key => value  }
+  for my $entry ($feed->entries) {
+    my $link = $entry->link;
+    next unless $link;
+    my %fields;
+    $fields{date} = $entry->issued->epoch || $entry->modified->epoch;
+    $fields{handle} = $handle;
+    $fields{title} = parse_html($entry->title);
+    $fields{url}   = $link;
+    $fields{body}  = parse_html($entry->content->body || $entry->summary->body);
+    $items{$link} = \%fields;
+  }
+  return \%items;
+}
+
+# our parser
+sub parse_html {
+  my $html = shift;
+  my $p = HTML::PullParser->new(
+				doc   => $html,
+				start => '"S", tagname',
+				end   => '"E", tagname',
+				text  => '"T", dtext',
+				empty_element_tags => 1,
+				marked_sections => 1,
+				unbroken_text => 1,
+				ignore_elements => [qw(script style)]
+			       ) or return undef;
+  my @text;
+  while (my $token = $p->get_token) {
+    my $type = shift @$token;
+    if ($type eq 'S') {
+      my $tag = shift @$token;
+      if ($tag =~ m/^(div|p|br)$/s) {
+	push @text, "\n";
+      }
+    } elsif ($type eq 'E') {
+      my $tag = shift @$token;
+      if ($tag =~ m/^(div|p|br)$/s) {
+	push @text, "\n";
+      }
+    } elsif ($type eq 'T') {
+      my $txt = shift @$token;
+      $txt =~ s/\s+/ /;
+      push @text, $txt;
+    } else {
+      warn "unknon type passed in the parser\n";
+    }
+  }
+  my $result = join("", @text);
+  undef @text;
+  $result =~ s/\n{2,}/\n/gs;
+  return $result;
+};
+
+
+####################################################################
+#                     DISPATCH                                     #
+####################################################################
 
 
 sub dispatch_feeds {
@@ -185,6 +264,10 @@ sub flush_queue {
   # if the contact gets online, look into the queue for its id and spam it
 }
 
+
+
+
+# and this is just the glue
 
 sub feed_fetch_and_dispatch {
   my ($dbh, $roster) = @_;
