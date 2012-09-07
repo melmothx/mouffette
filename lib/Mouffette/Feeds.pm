@@ -24,6 +24,7 @@ use AnyEvent::HTTP;
 use Data::Dumper;
 use XML::Feed;
 use HTML::PullParser;
+use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
@@ -107,6 +108,7 @@ sub validate_feed {
 	return $form->("Feed failed: " . $hdr->{Reason});
       }
       # and it parses cleanly
+      check_unzip_broken_server($hdr, \$data);
       my $feed = XML::Feed->parse(\$data) or
 	return $form->("Feed failed: " . XML::Feed->errstr);
       # ok, all seems valid.
@@ -151,6 +153,7 @@ sub fetch_feeds {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
   	print "Got $handle!\n";
+	check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
       } else {
   	print "$handle => $hdr->{Status}\n";
@@ -315,6 +318,24 @@ sub feed_fetch_and_dispatch {
   # look in the assoc table,
 }
 
+sub check_unzip_broken_server {
+  my ($hdr, $gzipped) = @_;
+  if ($hdr->{'content-encoding'} and
+      $hdr->{'content-encoding'} eq 'gzip') {
+    print "found compressed content...";
+    my $uncompressed;
+    if (gunzip $gzipped => \$uncompressed) {
+      # we modify the referenced scalar
+      $$gzipped = $uncompressed;
+      undef $uncompressed;
+      print $$gzipped, "done\n";
+    } else {
+      print "but uncompressing failed\n";
+    }
+  } else {
+    print "content not compressed\n";
+  }
+}
 
 
 1;
