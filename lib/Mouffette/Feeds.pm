@@ -11,7 +11,9 @@ our @ISA = qw(Exporter);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-our @EXPORT_OK = qw(validate_feed unsubscribe_feed);
+our @EXPORT_OK = qw(validate_feed
+		    unsubscribe_feed
+		    list_feeds);
 
 our $VERSION = '0.01';
 
@@ -20,6 +22,24 @@ use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use XML::Feed;
 use Mouffette::Utils qw/bot_fast_reply/;
+
+sub list_feeds {
+  my ($con, $msg, $dbh) = @_;
+  my $jid = bare_jid($msg->from);
+  my $list = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?');
+  $list->execute($jid);
+  my @subscribed;
+  while (my @row = $list->fetchrow_array) {
+    push @subscribed, shift(@row);
+  };
+  my $reply;
+  if (@subscribed) {
+    $reply = "Your subscriptions: " . join(", ", @subscribed);
+  } else {
+    $reply = "No subscriptions";
+  }
+  bot_fast_reply($con, $msg, $reply);
+}
 
 sub unsubscribe_feed {
   my ($con, $msg, $dbh, $handle) = @_;

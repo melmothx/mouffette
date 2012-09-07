@@ -20,6 +20,7 @@ use AnyEvent::HTTP;
 use Data::Dumper;
 use Mouffette::Utils qw/bot_fast_reply/;
 use Mouffette::Feeds qw/validate_feed
+			list_feeds
 			unsubscribe_feed/;
 
 
@@ -47,6 +48,10 @@ my %commands = (
 			  help => "unsub <alias>: unsubscribe the feed know as <alias>",
 			  call => \&unsubscribe_feed,
 			 },
+		list => {
+			 help => "list the feeds you're subscribed to",
+			 call => \&list_feeds,
+			},
 	    );
 
 
