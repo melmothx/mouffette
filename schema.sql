@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS feeditems (
        title    VARCHAR(255),
        url	TEXT UNIQUE NOT NULL,
        body 	TEXT NOT NULL,
+       send     INTEGER,	
        FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS queue (
        id    	INTEGER PRIMARY KEY,
