@@ -12,7 +12,10 @@ use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
 use Mouffette::Commands qw/parse_cmd/;
-use Mouffette::Feeds qw/feed_fetch_and_dispatch/;
+use Mouffette::Feeds qw(
+			 feed_fetch_and_dispatch
+			 flush_queue
+		       );
 use DBI;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
@@ -84,8 +87,9 @@ $cl->reg_cb (
 	     # CONTACT MANAGING
 	     presence_update => sub {
 	       my ($con, $roster, $contact, $oldpres, $newpres) = @_;
-	       debug_print ("Presence update ", $contact->jid, ": ",
-			    show_pres($newpres));
+	       if (show_pres($newpres) eq 'available') {
+		 flush_queue($dbh, $contact->jid);
+	       }
 	     },
 	     contact_request_subscribe => sub {
 	       my ($con, $roster, $contact, $message) = @_;

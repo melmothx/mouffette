@@ -15,6 +15,7 @@ our @EXPORT_OK = qw(validate_feed
 		    unsubscribe_feed
 		    list_feeds
 		    feed_fetch_and_dispatch
+		    flush_queue
 		  );
 
 our $VERSION = '0.01';
@@ -124,13 +125,50 @@ sub validate_feed {
 
 sub fetch_feeds {
   my $dbh = shift;
+  # get the feeds we need to fetch
+  my $sthlist = $dbh->prepare('SELECT handle, url FROM feeds;');
+  $sthlist->execute;
+  my $targets = $sthlist->fetchall_arrayref;
+  while (@$targets) {
+    my ($handle, $url) = @{shift @$targets};
+    http_get $url, sub {
+      my ($data, $hdr) = @_;
+      print Dumper($hdr);
+      if ($hdr->{Status} eq "200") {
+  	print "Got $handle!";
+	insert_feeds($dbh, $handle, $data, $hdr);
+      } else {
+  	print "$handle => $hdr->{Status}\n";
+      }
+    };
+  }
+}
+
+sub insert_feeds {
+  my ($dbh, $handle, $data, $hdr) = @_;
+  print "Insertion into $handle...";
   return;
 }
 
+
 sub dispatch_feeds {
-  my ($dhb, $roster) = @_;
+  my ($dbh, $roster) = @_;
+  # open the feeditems table, retrieve the unseen
+
+  # for each unseen, look into the assoc where the feed should be dispatched
+
+  # ask the roster for the status. If it's not "" (available), put
+  # them into the queue
+  
   return;
 }
+
+sub flush_queue {
+  my ($dbh, $jid) = @_;
+  print "Spamming $jid as is available now\n";
+  # if the contact gets online, look into the queue for its id and spam it
+}
+
 
 sub feed_fetch_and_dispatch {
   my ($dbh, $roster) = @_;
