@@ -11,8 +11,8 @@ use AnyEvent::XMPP::IM::Connection;
 use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
-# use Mouffette::Feeds qw/rss_loop/;
 use Mouffette::Commands qw/parse_cmd/;
+use Mouffette::Feeds qw/feed_fetch_and_dispatch/;
 use DBI;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
@@ -40,7 +40,7 @@ $dbh->do('PRAGMA foreign_keys = ON;');
 
 
 # connection loop
-my $loop = AnyEvent->condvar;
+my $loop = AE::cv;
 my $cl = AnyEvent::XMPP::IM::Connection->new (%{$conf->{connection}});
 my $w; # the watcher;
 my $interval = $conf->{bot}->{loopinterval};
@@ -52,8 +52,9 @@ $cl->reg_cb (
 	     session_ready => sub {
 	       my ($con, $acc) = @_;
 	       debug_print("session ready, starting watcher!");
-	       $w = AE::timer 0, $interval, sub {
-		 print "watching";
+	       $w = AE::timer 10, $interval, sub {
+		 debug_print("Rss fetching and dispatching...");
+		 feed_fetch_and_dispatch($dbh, $cl->get_roster)
 	       };
 	     },
 	     connect => sub {
@@ -65,7 +66,7 @@ $cl->reg_cb (
 	     disconnect => sub {
 	       my ($con, $h, $p, $reason) = @_;
 	       warn "Disconnected from $h:$p: $reason";
-	       $w = undef;
+	       undef $w;
 	       $loop->send;
 	     },
 	     roster_update => sub {

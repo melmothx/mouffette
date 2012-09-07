@@ -13,7 +13,9 @@ our @ISA = qw(Exporter);
 
 our @EXPORT_OK = qw(validate_feed
 		    unsubscribe_feed
-		    list_feeds);
+		    list_feeds
+		    feed_fetch_and_dispatch
+		  );
 
 our $VERSION = '0.01';
 
@@ -117,6 +119,25 @@ sub validate_feed {
       }
     };
   }
+}
+
+
+sub fetch_feeds {
+  my $dbh = shift;
+  return;
+}
+
+sub dispatch_feeds {
+  my ($dhb, $roster) = @_;
+  return;
+}
+
+sub feed_fetch_and_dispatch {
+  my ($dbh, $roster) = @_;
+  # look in the feeds table,
+  dispatch_feeds($dbh, $roster);
+  fetch_feeds($dbh);
+  # look in the assoc table,
 }
 
 
