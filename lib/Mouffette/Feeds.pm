@@ -18,14 +18,12 @@ our @EXPORT_OK = qw(validate_feed
 our $VERSION = '0.01';
 
 use AnyEvent::HTTP;
-use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use XML::Feed;
 use Mouffette::Utils qw/bot_fast_reply/;
 
 sub list_feeds {
-  my ($con, $msg, $dbh) = @_;
-  my $jid = bare_jid($msg->from);
+  my ($con, $msg, $jid, $dbh) = @_;
   my $list = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?');
   $list->execute($jid);
   my @subscribed;
@@ -42,9 +40,7 @@ sub list_feeds {
 }
 
 sub unsubscribe_feed {
-  my ($con, $msg, $dbh, $handle) = @_;
-  my $jid = bare_jid($msg->from);
-
+  my ($con, $msg, $jid, $dbh, $handle) = @_;
   # check
   my $assoccheck =
     $dbh->prepare('SELECT * FROM assoc WHERE handle = ? AND jid = ?;');
@@ -75,15 +71,12 @@ sub unsubscribe_feed {
 
 
 sub validate_feed {
-  my ($con, $msg, $dbh, $handle, $url) = @_;
+  my ($con, $msg, $jid, $dbh, $handle, $url) = @_;
   # sanity check
   unless ($handle and $url) {
     return bot_fast_reply($con, $msg, "Invalid arguments. See the help");
   }
-  # get the bare jid
-  my $jid = bare_jid($msg->from);
 
-  # owe queries
   my $sthcheck =
     $dbh->prepare('SELECT handle, url FROM feeds WHERE url = ? or handle = ?;');
   my $sthfeed = $dbh->prepare('INSERT INTO feeds (handle, url) VALUES (?, ?);');

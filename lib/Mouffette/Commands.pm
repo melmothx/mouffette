@@ -17,6 +17,7 @@ our @EXPORT_OK = qw(parse_cmd);
 our $VERSION = '0.01';
 
 use AnyEvent::HTTP;
+use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use Mouffette::Utils qw/bot_fast_reply/;
 use Mouffette::Feeds qw/validate_feed
@@ -59,15 +60,16 @@ sub parse_cmd {
   my ($con, $msg, $dbh) = @_;
   my @args = split(/\s+/, $msg->any_body);
   my $cmd = shift @args;
+  my $jid = bare_jid($msg->from);
   if ($cmd && (exists $commands{$cmd})) {
-    $commands{$cmd}->{call}->($con, $msg, $dbh, @args);
+    $commands{$cmd}->{call}->($con, $msg, $jid, $dbh, @args);
   } else {
     give_help($con, $msg);
   }
 }
 
 sub download {
-  my ($con, $msg, $dbh, $url) = @_;
+  my ($con, $msg, $jid, $dbh, $url) = @_;
   return unless $url;
   http_get $url, sub {
     my ($body, $hdr) = @_;
@@ -76,7 +78,7 @@ sub download {
 }
 
 sub give_help {
-  my ($con, $msg, $dbh, $arg) = @_;
+  my ($con, $msg, $jid, $dbh, $arg) = @_;
   my $answer;
   if ($arg && (exists $commands{$arg})) {
     $answer = $commands{$arg}->{help};
