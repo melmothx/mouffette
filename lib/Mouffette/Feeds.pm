@@ -354,7 +354,7 @@ sub dispatch_feeds {
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
     my ($handle, $title, $url, $body) = @feed;
-    my $message = "$handle: $title\n$body\n$url\n========‧E‧O‧F‧=======\n\n";
+    my $message = "$handle: $title\n$body\n$url\n========εοφ========\n\n";
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
 	print "Sending $url to $buddy\n";
