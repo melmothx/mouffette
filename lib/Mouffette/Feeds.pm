@@ -146,12 +146,10 @@ sub validate_feed {
 
 sub fetch_feeds {
   my $dbh = shift;
-  # get the feeds we need to fetch
-  my $query = q{
-     SELECT feeds.handle, feeds.url, gets.etag, gets.time
+  my $sthlist =
+    $dbh->prepare('SELECT feeds.handle, feeds.url, gets.etag, gets.time
      FROM feeds INNER JOIN gets ON feeds.url=gets.url
-     ORDER BY feeds.handle;};
-  my $sthlist = $dbh->prepare($query);
+     ORDER BY feeds.handle;');
   $sthlist->execute;
   my $targets = $sthlist->fetchall_arrayref;
   while (@$targets) {
@@ -199,15 +197,13 @@ sub insert_feeds {
     $exist{$links[0]} = 1;
   };
   # insert code
-  my $insquery = 'INSERT INTO feeditems
+  my $insertion = $dbh->prepare('INSERT INTO feeditems
      (date, handle, title, url, body, send) VALUES
-     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  1  );';
-  my $insertion = $dbh->prepare($insquery);
-
-  # delete the ones which are no more
-  my $delquery =
-    'DELETE FROM feeditems WHERE url = ? AND handle = ? AND send = 0';
-  my $deletion = $dbh->prepare($delquery);
+     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  1  );');
+				
+  my $deletion =
+    $dbh->prepare('DELETE FROM feeditems
+                   WHERE url = ? AND handle = ? AND send = 0');
 
   # do
   foreach my $permalink (keys %$items) {
@@ -223,11 +219,9 @@ sub insert_feeds {
     $deletion->execute($oldlink, $handle)
       unless $items->{$oldlink};
   }
-  # and finally, update the gets
-  my $updatequery = q{
-     UPDATE gets SET etag = ?, time = ?
-     WHERE url = (SELECT url FROM feeds WHERE handle = ?);};
-  my $updategets = $dbh->prepare($updatequery);
+  # update the gets
+  my $updategets = $dbh->prepare('UPDATE gets SET etag = ?, time = ?
+     WHERE url = (SELECT url FROM feeds WHERE handle = ?);');
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
   print "Done with fetching $handle\n";
   return;
