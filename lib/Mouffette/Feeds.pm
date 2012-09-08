@@ -286,16 +286,64 @@ sub parse_html {
 #                     DISPATCH                                     #
 ####################################################################
 
+sub get_availables {
+  my $con = shift;
+  my $roster = $con->get_roster;
+  return unless $roster->is_retrieved;
+  my %contacts;
+  foreach my $c ($roster->get_contacts) {
+    my $jid = $c->jid;
+    my $pres = $c->get_priority_presence;
+    if (defined $pres and (not $pres->show)) {
+      print "$jid is online, building hash\n";
+      $contacts{$jid} = sub {
+	my $message = shift;
+	print "Sending out message to $jid\n";
+	$c->make_message( body => $message)->send($con);
+      }
+    }
+  }
+  return \%contacts;
+}
 
 sub dispatch_feeds {
-  my ($dbh, $roster) = @_;
+  my ($dbh, $con) = @_;
+  my $contacts = get_availables($con);
+  return unless defined $contacts;
+  #  $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
   # open the feeditems table, retrieve the unseen
+  my $tosend =
+    $dbh->prepare('SELECT handle, title, url, body FROM
+                              feeditems WHERE send = 1 ORDER BY date;');
+  my $fdsent =
+    $dbh->prepare('UPDATE feeditems SET send = 0
+                            WHERE send = 1 AND url = ?;');
+  my $toqueue =
+    $dbh->prepare('INSERT INTO queue (handle, jid, body) VALUES (?, ?, ?);');
 
-  # for each unseen, look into the assoc where the feed should be dispatched
+  # check the associations.
+  my $getass =
+    $dbh->prepare('SELECT jid FROM assoc WHERE handle = ?;');
 
-  # ask the roster for the status. If it's not "" (available), put
-  # them into the queue
-  
+  $tosend->execute;
+  while (my @feed = $tosend->fetchrow_array) {
+    # compose message
+    my ($handle, $title, $url, $body) = @feed;
+    my $message = "$handle: $title\n$body\n$url";
+    $getass->execute($handle); # ask for the handle and retrieve the jids
+    while (my @jidrow = $getass->fetchrow_array) {
+      my $jid = shift(@jidrow);
+      if (exists $contacts->{$jid}) {
+	$contacts->{$jid}->($message);
+      }
+      else {
+	$toqueue->execute($handle, $jid, $message);
+      }
+    }
+    $fdsent->execute($url);
+  };
+  warn "Errors: $tosend->err" if $tosend->err;
+  $dbh->commit; # or $dbh->rollback; 
   return;
 }
 
@@ -311,9 +359,9 @@ sub flush_queue {
 # and this is just the glue
 
 sub feed_fetch_and_dispatch {
-  my ($dbh, $roster) = @_;
+  my ($dbh, $con) = @_;
   # look in the feeds table,
-  dispatch_feeds($dbh, $roster);
+  dispatch_feeds($dbh, $con);
   fetch_feeds($dbh);
   # look in the assoc table,
 }
