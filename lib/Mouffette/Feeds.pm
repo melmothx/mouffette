@@ -421,17 +421,14 @@ sub check_unzip_broken_server {
   my ($hdr, $gzipped) = @_;
   if ($hdr->{'content-encoding'} and
       $hdr->{'content-encoding'} eq 'gzip') {
-    print "found compressed content...";
     my $uncompressed;
     if (gunzip $gzipped => \$uncompressed) {
       # we modify the referenced scalar
       $$gzipped = $uncompressed;
       undef $uncompressed;
     } else {
-      print "but uncompressing failed\n";
+      warn "Uncompressing failed\n";
     }
-  } else {
-    print "content not compressed\n";
   }
 }
 
