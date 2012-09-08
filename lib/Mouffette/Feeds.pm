@@ -285,32 +285,58 @@ sub parse_html {
 ####################################################################
 #                     DISPATCH                                     #
 ####################################################################
-
+    ## 
+    # $contacts = {
+    # 		 "marco@test" => {
+    # 				  subscribed => {
+    # 						 'lib' => 1,
+    # 						 'fi'  => 1,
+    # 						}
+    # 				  msg => sub { };
+    # 				 },
+    #            "ruff@ciao" => { subscribed => { }, msg => { }, },
+    # 		};
 sub get_availables {
-  my $con = shift;
+  # build a hash with code refs for sending message and the followed feeds; 
+  my ($dbh, $con) = @_;
+  my $getass = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?;');
   my $roster = $con->get_roster;
   return unless $roster->is_retrieved;
   my %contacts;
   foreach my $c ($roster->get_contacts) {
     my $jid = $c->jid;
     my $pres = $c->get_priority_presence;
-    if (defined $pres and (not $pres->show)) {
-      print "$jid is online, building hash\n";
-      $contacts{$jid} = sub {
-	my $message = shift;
-	print "Sending out message to $jid\n";
-	$c->make_message( body => $message)->send($con);
-      }
+    # next if not online;
+    next unless (defined $pres and (not $pres->show));
+    $contacts{$jid} = {};
+      # the code ref
+    $contacts{$jid}{msg} = sub {
+      my $message = shift;
+      print "Sending out message to $jid\n";
+      $c->make_message( body => $message)->send($con);
+    };
+    my @subscribed;
+    $getass->execute($jid);
+    while (my ($handle) = $getass->fetchrow_array) {
+      push @subscribed, $handle;
     }
+    my %subs;
+    while (@subscribed) {
+      my $h = shift @subscribed;
+      next unless $h;
+      $subs{$h} = 1;
+    }
+    $contacts{$jid}{subscribed} = \%subs;
   }
   return \%contacts;
 }
 
 sub dispatch_feeds {
   my ($dbh, $con) = @_;
-  my $contacts = get_availables($con);
+  my $contacts = get_availables($dbh, $con);
+  print Dumper ($contacts);
   return unless defined $contacts;
-  #  $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
+  $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
   # open the feeditems table, retrieve the unseen
   my $tosend =
     $dbh->prepare('SELECT handle, title, url, body FROM
@@ -321,23 +347,16 @@ sub dispatch_feeds {
   my $toqueue =
     $dbh->prepare('INSERT INTO queue (handle, jid, body) VALUES (?, ?, ?);');
 
-  # check the associations.
-  my $getass =
-    $dbh->prepare('SELECT jid FROM assoc WHERE handle = ?;');
-
   $tosend->execute;
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
     my ($handle, $title, $url, $body) = @feed;
     my $message = "$handle: $title\n$body\n$url";
-    $getass->execute($handle); # ask for the handle and retrieve the jids
-    while (my @jidrow = $getass->fetchrow_array) {
-      my $jid = shift(@jidrow);
-      if (exists $contacts->{$jid}) {
-	$contacts->{$jid}->($message);
-      }
-      else {
-	$toqueue->execute($handle, $jid, $message);
+    foreach my $buddy (keys %$contacts) {
+      if (exists $contacts->{$buddy}->{subscribed}->{$handle}) {
+	$contacts->{$buddy}->{msg}->($message);
+      } else {
+	$toqueue->execute($handle, $buddy, $message);
       }
     }
     $fdsent->execute($url);
