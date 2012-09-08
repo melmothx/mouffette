@@ -21,6 +21,8 @@ use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use Mouffette::Feeds qw/validate_feed
 			list_feeds
+			delete_queue
+			retrieve_queue
 			unsubscribe_feed/;
 
 
@@ -52,6 +54,14 @@ my %commands = (
 			 help => "list the feeds you're subscribed to",
 			 call => \&list_feeds,
 			},
+		getqueue => {
+			     help => "get the unread feeds when you were not available",
+			     call => \&retrieve_queue,
+			    },
+		deletequeue => {
+				help => "delete your queue with unread feeds",
+				call => \&delete_queue,
+			       },
 	    );
 
 

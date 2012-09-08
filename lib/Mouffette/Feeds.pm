@@ -16,6 +16,8 @@ our @EXPORT_OK = qw(validate_feed
 		    unsubscribe_feed
 		    list_feeds
 		    feed_fetch_and_dispatch
+		    delete_queue
+		    retrieve_queue
 		    flush_queue
 		  );
 
@@ -385,11 +387,24 @@ sub flush_queue {
 }
 
 sub retrieve_queue {
-  my ($dbh, $jid) = @_;
+  my ($form, $jid, $dbh) = @_;
+  $dbh->begin_work;
+  my $queue = $dbh->prepare('SELECT body FROM queue WHERE jid = ?');
+  my $flush = $dbh->prepare('DELETE FROM queue WHERE jid = ?');
+  $queue->execute($jid);
+  while (my ($body) = $queue->fetchrow_array) {
+    $form->($body);
+  }
+  $flush->execute($jid);
+  $form->("queue cleared");
+  $dbh->commit;
 }
 
 sub delete_queue {
-  my ($dbh, $jid) = @_;
+  my ($form, $jid, $dbh) = @_;
+  my $deletion = $dbh->prepare('DELETE FROM queue WHERE jid = ?');
+  $deletion->execute($jid);
+  $form->("Your queue has been deleted");
 }
 
 # and this is just the glue
