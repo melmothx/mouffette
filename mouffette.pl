@@ -55,10 +55,9 @@ $cl->reg_cb (
 	     session_ready => sub {
 	       my ($con) = @_;
 	       debug_print("session ready, starting watcher!");
-	       $w = AE::timer 10, $interval, sub {
+	       $w = AE::timer 2, $interval, sub {
+		 feed_fetch_and_dispatch($dbh, $con);
 		 system "cat /proc/$$/status | grep VmSize";
-		 debug_print("Rss fetching and dispatching...");
-		 feed_fetch_and_dispatch($dbh, $con)
 	       };
 	     },
 	     connect => sub {

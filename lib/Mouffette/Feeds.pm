@@ -3,6 +3,7 @@ package Mouffette::Feeds;
 use 5.010001;
 use strict;
 use warnings;
+use utf8;
 require Exporter;
 
 our @ISA = qw(Exporter);
@@ -152,11 +153,11 @@ sub fetch_feeds {
     http_get $url, headers => \%myheaders, sub {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
-  	print "Got $handle!\n";
+  	print "Got $url!\n";
 	check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
-      } else {
-  	print "$handle => $hdr->{Status}\n";
+#      } else {
+#  	print "$handle => $hdr->{Status}\n";
       }
     };
   }
@@ -338,7 +339,6 @@ sub get_availables {
 sub dispatch_feeds {
   my ($dbh, $con) = @_;
   my $feedtable = get_availables($dbh, $con);
-  print Dumper ($feedtable);
   $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
   # open the feeditems table, retrieve the unseen
   my $tosend =
@@ -354,14 +354,17 @@ sub dispatch_feeds {
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
     my ($handle, $title, $url, $body) = @feed;
-    my $message = "$handle: $title\n$body\n$url\n  =========   \n";
+    my $message = "$handle: $title\n$body\n$url\n========‧E‧O‧F‧=======\n\n";
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
+	print "Sending $url to $buddy\n";
 	$feedtable->{$handle}->{$buddy}->{msg}->($message);
       } else {
+	print "Queded $handle for $buddy\n";
 	$toqueue->execute($handle, $buddy, $message);
       }
     }
+    print "Marking feeds $url as read";
     $fdsent->execute($url);
   };
   warn "Errors: $tosend->err" if $tosend->err;
