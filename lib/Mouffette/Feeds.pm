@@ -287,55 +287,58 @@ sub parse_html {
 ####################################################################
     ## 
     # $contacts = {
-    # 		 "marco@test" => {
-    # 				  subscribed => {
-    # 						 'lib' => 1,
-    # 						 'fi'  => 1,
-    # 						}
-    # 				  msg => sub { };
-    # 				 },
-    #            "ruff@ciao" => { subscribed => { }, msg => { }, },
-    # 		};
+     # $feeds = { lib => {
+
+# $feeds = {
+# 	  lib => {
+# 		  "marco@test" => {
+# 				   msg => sub { };
+# 				   avail => 1;
+# 				  },
+# 		  "ruff@test" => {
+# 				  msg => sub { };
+# 				  avail => 1;
+# 				 }
+# 		 },
+# 	  next => { user => { }, user, { } },
+	  
 sub get_availables {
   # build a hash with code refs for sending message and the followed feeds; 
   my ($dbh, $con) = @_;
-  my $getass = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?;');
   my $roster = $con->get_roster;
   return unless $roster->is_retrieved;
-  my %contacts;
+
+  my $feedtable = {};
+  my $assoc = $dbh->prepare('SELECT handle, jid FROM assoc');
+  $assoc->execute;
+  while(my @ass = $assoc->fetchrow_array) {
+    my ($handle, $jid) = @ass;
+    $feedtable->{$handle} = {} unless exists $feedtable->{$handle};
+    $feedtable->{$handle}->{$jid} = { avail => 0};
+  }
+
   foreach my $c ($roster->get_contacts) {
     my $jid = $c->jid;
     my $pres = $c->get_priority_presence;
-    # next if not online;
     next unless (defined $pres and (not $pres->show));
-    $contacts{$jid} = {};
-      # the code ref
-    $contacts{$jid}{msg} = sub {
-      my $message = shift;
-      print "Sending out message to $jid\n";
-      $c->make_message( body => $message)->send($con);
-    };
-    my @subscribed;
-    $getass->execute($jid);
-    while (my ($handle) = $getass->fetchrow_array) {
-      push @subscribed, $handle;
+    foreach my $hand (keys %$feedtable) {
+      if (exists $feedtable->{$hand}->{$jid}) {
+	$feedtable->{$hand}->{$jid}->{avail} = 1;
+	$feedtable->{$hand}->{$jid}->{msg} = sub {
+	  my $message = shift;
+	  $c->make_message( body => $message,
+			    type => 'chat')->send($con);
+	};
+      }
     }
-    my %subs;
-    while (@subscribed) {
-      my $h = shift @subscribed;
-      next unless $h;
-      $subs{$h} = 1;
-    }
-    $contacts{$jid}{subscribed} = \%subs;
   }
-  return \%contacts;
+  return $feedtable;
 }
 
 sub dispatch_feeds {
   my ($dbh, $con) = @_;
-  my $contacts = get_availables($dbh, $con);
-  print Dumper ($contacts);
-  return unless defined $contacts;
+  my $feedtable = get_availables($dbh, $con);
+  print Dumper ($feedtable);
   $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
   # open the feeditems table, retrieve the unseen
   my $tosend =
@@ -351,10 +354,10 @@ sub dispatch_feeds {
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
     my ($handle, $title, $url, $body) = @feed;
-    my $message = "$handle: $title\n$body\n$url";
-    foreach my $buddy (keys %$contacts) {
-      if (exists $contacts->{$buddy}->{subscribed}->{$handle}) {
-	$contacts->{$buddy}->{msg}->($message);
+    my $message = "$handle: $title\n$body\n$url\n  =========   \n";
+    foreach my $buddy (keys %{$feedtable->{$handle}}) {
+      if ($feedtable->{$handle}->{$buddy}->{avail}) {
+	$feedtable->{$handle}->{$buddy}->{msg}->($message);
       } else {
 	$toqueue->execute($handle, $buddy, $message);
       }
@@ -367,13 +370,24 @@ sub dispatch_feeds {
 }
 
 sub flush_queue {
-  my ($dbh, $jid) = @_;
-  print "Spamming $jid as is available now\n";
-  # if the contact gets online, look into the queue for its id and spam it
+  # ask the contact if it wants to be spammed
+  my ($con, $contact, $dbh) = @_;
+  my $jid = $contact->jid;
+  my $queue = $dbh->prepare('SELECT COUNT(id) FROM queue WHERE jid = ?');
+  $queue->execute($jid);
+  my ($count) = $queue->fetchrow_array;
+  return unless $count;
+  my $body = "You have $count feeds unread. Tell me \"getqueue\" if you want to send them all, or \"deletequeue\" if you want me to delete them. You can issue these commands at any time"; 
+  $contact->make_message( body => $body, type => 'chat')->send($con);
 }
 
+sub retrieve_queue {
+  my ($dbh, $jid) = @_;
+}
 
-
+sub delete_queue {
+  my ($dbh, $jid) = @_;
+}
 
 # and this is just the glue
 

@@ -53,12 +53,12 @@ my $interval = $conf->{bot}->{loopinterval};
 $cl->reg_cb (
 	     # placeholders
 	     session_ready => sub {
-	       my ($con, $acc) = @_;
+	       my ($con) = @_;
 	       debug_print("session ready, starting watcher!");
 	       $w = AE::timer 10, $interval, sub {
 		 system "cat /proc/$$/status | grep VmSize";
 		 debug_print("Rss fetching and dispatching...");
-		 feed_fetch_and_dispatch($dbh, $cl->get_roster)
+		 feed_fetch_and_dispatch($dbh, $con)
 	       };
 	     },
 	     connect => sub {
@@ -88,8 +88,9 @@ $cl->reg_cb (
 	     # CONTACT MANAGING
 	     presence_update => sub {
 	       my ($con, $roster, $contact, $oldpres, $newpres) = @_;
+	       print "presence update from " . $contact->jid;
 	       if (show_pres($newpres) eq 'available') {
-		 flush_queue($dbh, $contact->jid);
+		 flush_queue($con, $contact, $dbh);
 	       }
 	     },
 	     contact_request_subscribe => sub {
