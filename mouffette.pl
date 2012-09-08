@@ -59,7 +59,6 @@ $cl->reg_cb (
 	       debug_print("session ready, starting watcher!");
 	       $w = AE::timer 2, $interval, sub {
 		 feed_fetch_and_dispatch($dbh, $con);
-		 system "cat /proc/$$/status | grep VmSize";
 	       };
 	     },
 	     connect => sub {
