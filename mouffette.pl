@@ -89,10 +89,8 @@ $cl->reg_cb (
 	     # CONTACT MANAGING
 	     presence_update => sub {
 	       my ($con, $roster, $contact, $oldpres, $newpres) = @_;
-	       print "presence update from " . $contact->jid;
-	       if (show_pres($newpres) eq 'available') {
-		 flush_queue($con, $contact, $dbh);
-	       }
+	       print "presence update from " . $contact->jid . "\n";
+	       flush_queue($con, $contact, $dbh) if defined $newpres;
 	     },
 	     contact_request_subscribe => sub {
 	       my ($con, $roster, $contact, $message) = @_;
@@ -159,19 +157,5 @@ sub pid_print {
   open (my $fh, ">", $pidfile) or die "Can't write pid file: $!\n";
   print $fh $$;
   close $fh;
-}
-
-
-sub show_pres {
-  my $pres = shift;
-  my $string;
-  if (not defined $pres) {
-    $string = "offline";
-  } elsif (not $pres->show) {
-    $string = "available";
-  } else {
-    $string = $pres->show;
-  }
-  return $string;
 }
 

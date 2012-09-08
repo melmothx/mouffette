@@ -322,8 +322,7 @@ sub get_availables {
 
   foreach my $c ($roster->get_contacts) {
     my $jid = $c->jid;
-    my $pres = $c->get_priority_presence;
-    next unless (defined $pres and (not $pres->show));
+    next unless (defined $c->get_priority_presence);
     foreach my $hand (keys %$feedtable) {
       if (exists $feedtable->{$hand}->{$jid}) {
 	$feedtable->{$hand}->{$jid}->{avail} = 1;
