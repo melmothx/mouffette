@@ -194,7 +194,8 @@ sub insert_feeds {
   my $insertion = $dbh->prepare($insquery);
 
   # delete the ones which are no more
-  my $delquery = 'DELETE FROM feeditems WHERE url = ? AND send = 0';
+  my $delquery =
+    'DELETE FROM feeditems WHERE url = ? AND handle = ? AND send = 0';
   my $deletion = $dbh->prepare($delquery);
 
   # do
@@ -208,7 +209,7 @@ sub insert_feeds {
 		       ) unless $exist{$permalink};
   };
   foreach my $oldlink (keys %exist) {
-    $deletion->execute($oldlink)
+    $deletion->execute($oldlink, $handle)
       unless $items->{$oldlink};
   }
   # and finally, update the gets
@@ -347,7 +348,7 @@ sub dispatch_feeds {
                               feeditems WHERE send = 1 ORDER BY date;');
   my $fdsent =
     $dbh->prepare('UPDATE feeditems SET send = 0
-                            WHERE send = 1 AND url = ?;');
+                            WHERE send = 1 AND url = ? AND handle = ?;');
   my $toqueue =
     $dbh->prepare('INSERT INTO queue (handle, jid, body) VALUES (?, ?, ?);');
 
@@ -366,7 +367,7 @@ sub dispatch_feeds {
       }
     }
     print "Marking feeds $url as read";
-    $fdsent->execute($url);
+    $fdsent->execute($url, $handle);
   };
   warn "Errors: $tosend->err" if $tosend->err;
   $dbh->commit; # or $dbh->rollback; 
