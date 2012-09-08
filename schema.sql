@@ -20,9 +20,10 @@ CREATE TABLE IF NOT EXISTS feeditems (
        date 	INTEGER,
        handle   VARCHAR(30) NOT NULL,
        title    VARCHAR(255),
-       url	TEXT UNIQUE NOT NULL,
+       url	TEXT NOT NULL,
        body 	TEXT NOT NULL,
        send     INTEGER,	
+       CONSTRAINT handleurl UNIQUE (handle,url,date),
        FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS queue (
        id    	INTEGER PRIMARY KEY,
