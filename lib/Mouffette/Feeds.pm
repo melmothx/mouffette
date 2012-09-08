@@ -111,7 +111,10 @@ sub validate_feed {
       unless ($hdr->{Status} eq "200") {
 	return $form->("Feed failed: " . $hdr->{Reason});
       }
-      # and it parses cleanly
+      # check if it's rate-limited
+      if ($hdr->{'x-ratelimit-limit'}) {
+	return $form->("There is a rate limit on this server, sorry");
+      }
       check_unzip_broken_server($hdr, \$data);
       my $feed;
       try {
@@ -120,6 +123,7 @@ sub validate_feed {
 	warn "caught error: $_";
 	return $form->("Error while parsing XML");
       };
+      # and it parses cleanly
       return $form->("Feed failed: " . XML::Feed->errstr) unless $feed;
       # ok, all seems valid.
       $sthfeed->execute($handle, $url);
