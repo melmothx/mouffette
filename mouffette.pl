@@ -88,7 +88,7 @@ $cl->reg_cb (
 	     # CONTACT MANAGING
 	     presence_update => sub {
 	       my ($con, $roster, $contact, $oldpres, $newpres) = @_;
-	       print "presence update from " . $contact->jid . "\n";
+	       # print "presence update from " . $contact->jid . "\n";
 	       flush_queue($con, $contact, $dbh) if defined $newpres;
 	     },
 	     contact_request_subscribe => sub {

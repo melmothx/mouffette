@@ -164,7 +164,7 @@ sub fetch_feeds {
     http_get $url, headers => \%myheaders, sub {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
-  	print "Got $url!\n";
+  	# print "Got $url!\n";
 	check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
 #      } else {
@@ -223,7 +223,7 @@ sub insert_feeds {
   my $updategets = $dbh->prepare('UPDATE gets SET etag = ?, time = ?
      WHERE url = (SELECT url FROM feeds WHERE handle = ?);');
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
-  print "Done with fetching $handle\n";
+  # print "Done with fetching $handle\n";
   return;
 }
 
@@ -237,7 +237,7 @@ sub xml_feed_parse {
     return;
   };
   unless ($feed) {
-    print "Error on $handle: ", XML::Feed->errstr, "\n";
+    warn "Error on $handle: ", XML::Feed->errstr, "\n";
     return;
   }
   my %items;
@@ -370,14 +370,14 @@ sub dispatch_feeds {
     my $message = "$handle: $title\n$body\n$url\n========εοφ========\n\n";
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
-	print "Sending $url to $buddy\n";
+	# print "Sending $url to $buddy\n";
 	$feedtable->{$handle}->{$buddy}->{msg}->($message);
       } else {
-	print "Queded $handle for $buddy\n";
+	# print "Queded $handle for $buddy\n";
 	$toqueue->execute($handle, $buddy, $message);
       }
     }
-    print "Marking feeds $url as read";
+    # print "Marking feeds $url as read";
     $fdsent->execute($url, $handle);
   };
   warn "Errors: $tosend->err" if $tosend->err;
