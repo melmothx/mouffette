@@ -396,8 +396,8 @@ sub retrieve_queue {
     $form->($body);
   }
   $flush->execute($jid);
-  $form->("queue cleared");
   $dbh->commit;
+  $form->("queue cleared");
 }
 
 sub delete_queue {
