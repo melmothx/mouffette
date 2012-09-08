@@ -37,7 +37,9 @@ unless (-f $db) {
 }
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
-		       { AutoCommit => 1, })
+		       { AutoCommit => 1, 
+			 'sqlite_unicode' => 1
+		       })
   or die "Can't open connection to the db\n";
 $dbh->do('PRAGMA foreign_keys = ON;');
 
