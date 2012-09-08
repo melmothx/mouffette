@@ -26,6 +26,7 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use Data::Dumper;
 use XML::Feed;
+use Try::Tiny;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
@@ -112,8 +113,14 @@ sub validate_feed {
       }
       # and it parses cleanly
       check_unzip_broken_server($hdr, \$data);
-      my $feed = XML::Feed->parse(\$data) or
-	return $form->("Feed failed: " . XML::Feed->errstr);
+      my $feed;
+      try {
+	$feed = XML::Feed->parse(\$data)
+      } catch {
+	warn "caught error: $_";
+	return $form->("Error while parsing XML");
+      };
+      return $form->("Feed failed: " . XML::Feed->errstr) unless $feed;
       # ok, all seems valid.
       $sthfeed->execute($handle, $url);
       $sthassc->execute($handle, $jid);
@@ -224,7 +231,13 @@ sub insert_feeds {
 
 sub xml_feed_parse {
   my ($handle, $data) = @_;
-  my $feed = XML::Feed->parse($data);
+  my $feed;
+  try {
+    $feed = XML::Feed->parse($data);
+  } catch {
+    warn "Error on $handle while parsing: $_";
+    return;
+  };
   unless ($feed) {
     print "Error on $handle: ", XML::Feed->errstr, "\n";
     return;
