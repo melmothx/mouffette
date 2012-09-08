@@ -11,7 +11,7 @@ require Exporter;
 
 our @ISA = qw(Exporter);
 
-our @EXPORT_OK = qw(follow_file);
+our @EXPORT_OK = qw(file_tail);
 our $VERSION = '0.01';
 
 $| = 1;
@@ -48,7 +48,7 @@ sub file_tail {
   }
 
   open (my $fh, '<:encoding(utf8)', $file)
-    or return "Houston, we have a problem: $!";
+    or die "Houston, we have a problem: $!";
   if ($offset > 0) {
     seek($fh, $offset, 0);    # move the cursor, starting from the end
   }
@@ -61,14 +61,9 @@ sub file_tail {
   }
   close $fh;
   # first run, don't output all the stuff.
-  return unless @saythings;
+  return unless $#saythings >= 0;
   $saythings[$#saythings] .=  " (" . $name . ")";
   return @saythings;
-}
-
-sub follow_file {
-  my ($con, $config);
-  return;
 }
 
 1;

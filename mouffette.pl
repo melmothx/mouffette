@@ -16,8 +16,6 @@ use Mouffette::Feeds qw(
 			 feed_fetch_and_dispatch
 			 flush_queue
 		       );
-use Mouffette::Tail qw/follow_file/;
-
 use DBI;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
@@ -61,7 +59,7 @@ $cl->reg_cb (
 	       debug_print("session ready, starting watcher!");
 	       $w = AE::timer 2, $interval, sub {
 		 feed_fetch_and_dispatch($dbh, $con);
-		 follow_file($conf, $con)
+		 system "cat /proc/$$/status | grep VmSize";
 	       };
 	     },
 	     connect => sub {
