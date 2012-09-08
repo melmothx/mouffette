@@ -19,6 +19,7 @@ our @EXPORT_OK = qw(validate_feed
 		    delete_queue
 		    retrieve_queue
 		    flush_queue
+		    xml_feed_parse
 		  );
 
 our $VERSION = '0.01';
@@ -243,10 +244,18 @@ sub xml_feed_parse {
   my %items;
   # create a hashref with url => { key => value  }
   for my $entry ($feed->entries) {
+    # HERE WE HAVE A PROBLEM BECAUSE SOME BUGGY FEEDS HAVE THE SAME LINK
     my $link = $entry->link;
     next unless $link;
     my %fields;
-    $fields{date} = $entry->issued->epoch || $entry->modified->epoch;
+
+    # be carefule with the date
+    my $date = $entry->issued || $entry->modified;
+    if ($date) {
+      $fields{date} = $date->epoch;
+    } else {
+      $fields{date} = 1; # which is basically +30 years ago :-)
+    }
     $fields{handle} = $handle;
     $fields{title} = parse_html($entry->title);
     $fields{url}   = $link;
