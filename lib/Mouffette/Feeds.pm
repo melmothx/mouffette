@@ -4,6 +4,8 @@ use 5.010001;
 use strict;
 use warnings;
 use utf8;
+use Encode qw/encode_utf8/;
+use Digest::SHA qw/sha1_hex/;
 require Exporter;
 
 our @ISA = qw(Exporter);
@@ -182,7 +184,7 @@ sub insert_feeds {
   my $items = xml_feed_parse($handle, $data);
   return unless $items;
 
-  # { 'permalink' => {
+  # { 'hash' => {
   # 		  'body' => 'bla',
   # 		  'handle' => 'lib',
   # 		  'date' => 1345011030,
@@ -190,35 +192,36 @@ sub insert_feeds {
   # 		  'title' => 'My title'
   # 		   }, { ... }, { ... }}
 
-  # now we check if the feeds already exist (based on the permalink)
-  my $permalinks = $dbh->prepare('SELECT url FROM feeditems where handle = ?');
-  $permalinks->execute($handle);
+  # now we check if the feeds already exist (based on the hash)
+  my $hashes = $dbh->prepare('SELECT hash FROM feeditems where handle = ?');
+  $hashes->execute($handle);
   my %exist;
-  while (my @links = $permalinks->fetchrow_array) {
-    $exist{$links[0]} = 1;
+  while (my ($hash) = $hashes->fetchrow_array) {
+    $exist{$hash} = 1;
   };
   # insert code
   my $insertion = $dbh->prepare('INSERT INTO feeditems
-     (date, handle, title, url, body, send) VALUES
-     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  1  );');
+     (date, handle, title, url, body, hash, send) VALUES
+     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  ? ,   1  );');
 				
   my $deletion =
     $dbh->prepare('DELETE FROM feeditems
-                   WHERE url = ? AND handle = ? AND send = 0');
+                   WHERE hash = ? AND handle = ? AND send = 0');
 
   # do
-  foreach my $permalink (keys %$items) {
+  foreach my $hashparsed (keys %$items) {
     $insertion->execute(
-			$items->{$permalink}->{date},
-			$items->{$permalink}->{handle},
-			$items->{$permalink}->{title},
-			$items->{$permalink}->{url},
-			$items->{$permalink}->{body}
-		       ) unless $exist{$permalink};
+			$items->{$hashparsed}->{date},
+			$items->{$hashparsed}->{handle},
+			$items->{$hashparsed}->{title},
+			$items->{$hashparsed}->{url},
+			$items->{$hashparsed}->{body},
+			$items->{$hashparsed}->{hash},
+		       ) unless $exist{$hashparsed};
   };
-  foreach my $oldlink (keys %exist) {
-    $deletion->execute($oldlink, $handle)
-      unless $items->{$oldlink};
+  foreach my $oldhash (keys %exist) {
+    $deletion->execute($oldhash, $handle)
+      unless $items->{$oldhash};
   }
   # update the gets
   my $updategets = $dbh->prepare('UPDATE gets SET etag = ?, time = ?
@@ -245,29 +248,46 @@ sub xml_feed_parse {
   # create a hashref with url => { key => value  }
   for my $entry ($feed->entries) {
     # HERE WE HAVE A PROBLEM BECAUSE SOME BUGGY FEEDS HAVE THE SAME LINK
-    my $link = $entry->link;
-    next unless $link;
-    my %fields;
-
-    # be carefule with the date
-    my $date = $entry->issued || $entry->modified;
+    my $link  = $entry->link || " ";
+    my $title = parse_html($entry->title);
+    my $date = $entry->modified || $entry->issued;
+    my $realdate;
     if ($date) {
-      $fields{date} = $date->epoch;
+      $realdate = $date->epoch;
     } else {
-      $fields{date} = 1; # which is basically +30 years ago :-)
+      $realdate = 1; # which is basically +30 years ago :-)
     }
+    my $body = $entry->content || $entry->summary;
+    my $realbody;
+    if (defined $body) {
+      $realbody = parse_html($body->body);
+    }
+
+    my %fields;
     $fields{handle} = $handle;
-    $fields{title} = parse_html($entry->title);
-    $fields{url}   = $link;
-    $fields{body}  = parse_html($entry->content->body || $entry->summary->body);
-    $items{$link} = \%fields;
+    $fields{title}  = $title;
+    $fields{url}    = $link;
+    $fields{body}   = $realbody;
+    $fields{date}   = $realdate;
+
+    my $hash = _feed_make_hash(\%fields);
+    $fields{hash}   = $hash;
+
+    $items{$hash} = \%fields;
   }
   return \%items;
+}
+
+sub _feed_make_hash {
+  my $item = shift;
+  return sha1_hex($item->{handle} . $item->{title} . $item->{url} .
+    $item->{body} . $item->{date}); # nothing should be undefined here.
 }
 
 # our parser
 sub parse_html {
   my $html = shift;
+  return " " unless $html;
   my $p = HTML::PullParser->new(
 				doc   => $html,
 				start => '"S", tagname',
