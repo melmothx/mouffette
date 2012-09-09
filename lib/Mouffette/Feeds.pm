@@ -22,6 +22,8 @@ our @EXPORT_OK = qw(validate_feed
 		    retrieve_queue
 		    flush_queue
 		    xml_feed_parse
+		    show_last_feeds
+		    show_all_feeds
 		  );
 
 our $VERSION = '0.01';
@@ -397,7 +399,7 @@ sub dispatch_feeds {
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
     my ($handle, $title, $url, $body) = @feed;
-    my $message = "$handle: $title\n$body\n$url\n========εοφ========\n\n";
+    my $message = _format_msg($handle, $title, $body, $url);
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
 	debug_print("Sending $url to $buddy");
@@ -457,6 +459,40 @@ sub feed_fetch_and_dispatch {
   fetch_feeds($dbh);
   # look in the assoc table,
 }
+
+
+sub show_last_feeds {
+  my ($form, $jid, $dbh, $handle) = @_;
+  return unless $handle;
+  my $show = $dbh->prepare('SELECT handle, title, body, url FROM feeditems
+                            WHERE handle = ? ORDER BY date DESC LIMIT 3');
+  $show->execute($handle);
+  while (my @feed = $show->fetchrow_array) {
+    $form->(_format_msg(@feed));
+  }
+}
+
+sub show_all_feeds {
+  my ($form, $jid, $dbh, $handle) = @_;
+  return unless $handle;
+  my $all = $dbh->prepare('SELECT title, url FROM feeditems
+                            WHERE handle = ? ORDER BY date');
+  $all->execute($handle);
+  my $reply;
+  while (my @title = $all->fetchrow_array) {
+    $reply .= $title[0] . " => " . $title[1] . "\n";
+  }
+  $form->($reply) if $reply;
+}
+
+
+### HELPER
+
+sub _format_msg {
+  my ($handle, $title, $body, $url) = @_;
+  return "$handle: $title\n$body\n$url\n========εοφ========\n\n"
+}
+
 
 sub check_unzip_broken_server {
   my ($hdr, $gzipped) = @_;

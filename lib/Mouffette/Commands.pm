@@ -20,6 +20,8 @@ use AnyEvent::HTTP;
 use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
 use Mouffette::Feeds qw/validate_feed
+			show_last_feeds
+			show_all_feeds
 			list_feeds
 			delete_queue
 			retrieve_queue
@@ -62,6 +64,14 @@ my %commands = (
 				help => "delete your queue with unread feeds",
 				call => \&delete_queue,
 			       },
+		show => {
+			 help => "show <alias>:  show the last 3 entries from the feed known as <alias>",
+			 call => \&show_last_feeds,
+			},
+		showall => {
+			    help => "showall <alias>: show all the entry of the feed known as <alias>",
+			    call => \&show_all_feeds,
+			   },
 	    );
 
 
