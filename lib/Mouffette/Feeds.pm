@@ -24,6 +24,7 @@ our @EXPORT_OK = qw(validate_feed
 		    search_feeds
 		    xml_feed_parse
 		    show_last_feeds
+		    parse_html
 		    show_all_feeds
 		  );
 
@@ -123,14 +124,12 @@ sub validate_feed {
 
   my $sthcheck =
     $dbh->prepare('SELECT handle, url FROM feeds WHERE url = ? or handle = ?;');
-  my $sthfeed = $dbh->prepare('INSERT INTO feeds (handle, url) VALUES (?, ?);');
-  my $sthassc = $dbh->prepare('INSERT INTO assoc (handle, jid) VALUES (?, ?);');
-  my $sthhttp = $dbh->prepare('INSERT INTO gets  (url) VALUES (?);');
-
   $sthcheck->execute($url, $handle);
   if (my $checkerror = $sthcheck->err) {
     return $form->($checkerror);
   }
+
+  my $sthassc = $dbh->prepare('INSERT INTO assoc (handle, jid) VALUES (?, ?);');
   # handle or url already present?
   if (my @feedrow = $sthcheck->fetchrow_array()) {
     ($handle, $url) = @feedrow;
@@ -140,7 +139,7 @@ sub validate_feed {
 	    "$handle ($url) now");
   } else {
     # fetch the feed. Everything is passed to the AnyEvent::HTTP
-    # closure. Who knows if we get leaks doing so
+    # closure.
     http_get $url, sub {
       my ($data, $hdr) = @_;
       # check if it's valid
@@ -162,9 +161,13 @@ sub validate_feed {
       # and it parses cleanly
       return $form->("Feed failed: " . XML::Feed->errstr) unless $feed;
       # ok, all seems valid.
+      my $sthfeed =
+	$dbh->prepare('INSERT INTO feeds (handle, url) VALUES (?, ?);');
       $sthfeed->execute($handle, $url);
-      $sthassc->execute($handle, $jid);
+      my $sthhttp =
+	$dbh->prepare('INSERT INTO gets  (url) VALUES (?);');
       $sthhttp->execute($url);
+      $sthassc->execute($handle, $jid);
       if (my $error = $sthfeed->err || $sthassc->err || $sthhttp->err) {
 	$form->("errors: $error");
       } else {
