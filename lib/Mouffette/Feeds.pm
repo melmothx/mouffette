@@ -328,6 +328,7 @@ sub xml_feed_parse {
     if (defined $body) {
       $realbody = parse_html($body->body);
     }
+    # append the enclosure here, when we get a working module
 
     my %fields;
     $fields{handle} = $handle;
@@ -347,7 +348,7 @@ sub xml_feed_parse {
 sub _feed_make_hash {
   my $item = shift;
   return sha1_hex($item->{handle} . $item->{title} . $item->{url} .
-    $item->{body} . $item->{date}); # nothing should be undefined here.
+    $item->{body}); # nothing should be undefined here.
 }
 
 # our parser
