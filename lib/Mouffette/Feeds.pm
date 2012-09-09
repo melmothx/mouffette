@@ -32,6 +32,7 @@ use XML::Feed;
 use Try::Tiny;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
+use Mouffette::Utils qw/debug_print/;
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
@@ -167,11 +168,11 @@ sub fetch_feeds {
     http_get $url, headers => \%myheaders, sub {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
-  	# print "Got $url!\n";
+  	debug_print("Got $url!");
 	check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
-#      } else {
-#  	print "$handle => $hdr->{Status}\n";
+      } else {
+  	debug_print("$handle => $hdr->{Status}");
       }
     };
   }
@@ -227,7 +228,7 @@ sub insert_feeds {
   my $updategets = $dbh->prepare('UPDATE gets SET etag = ?, time = ?
      WHERE url = (SELECT url FROM feeds WHERE handle = ?);');
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
-  # print "Done with fetching $handle\n";
+  debug_print("Done with fetching $handle");
   return;
 }
 
@@ -399,14 +400,14 @@ sub dispatch_feeds {
     my $message = "$handle: $title\n$body\n$url\n========εοφ========\n\n";
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
-	# print "Sending $url to $buddy\n";
+	debug_print("Sending $url to $buddy");
 	$feedtable->{$handle}->{$buddy}->{msg}->($message);
       } else {
-	# print "Queded $handle for $buddy\n";
+	debug_print("Queded $handle for $buddy");
 	$toqueue->execute($handle, $buddy, $message);
       }
     }
-    # print "Marking feeds $url as read";
+    debug_print("Marking feeds $url as read");
     $fdsent->execute($url, $handle);
   };
   warn "Errors: $tosend->err" if $tosend->err;

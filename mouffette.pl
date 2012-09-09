@@ -11,6 +11,7 @@ use AnyEvent::XMPP::IM::Connection;
 use AnyEvent::Strict;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
+use Mouffette::Utils qw/debug_print ts_print/;
 use Mouffette::Commands qw/parse_cmd/;
 use Mouffette::Feeds qw(
 			 feed_fetch_and_dispatch
@@ -21,7 +22,6 @@ use DBI;
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
 
-my $debug = 1;
 my $conf = LoadFile($ARGV[0]);
 
 # INITIALIZATION
@@ -56,16 +56,16 @@ $cl->reg_cb (
 	     # placeholders
 	     session_ready => sub {
 	       my ($con) = @_;
-	       debug_print("session ready, starting watcher!");
+	       ts_print("session ready, starting watcher!");
 	       $w = AE::timer 2, $interval, sub {
 		 feed_fetch_and_dispatch($dbh, $con);
 	       };
 	     },
 	     connect => sub {
-	       debug_print("Connected");
+	       ts_print("Connected");
 	     },
 	     stream_pre_authentication => sub {
-	       debug_print("Pre-authentication");
+	       ts_print("Pre-authentication");
 	     },
 	     disconnect => sub {
 	       my ($con, $h, $p, $reason) = @_;
@@ -74,15 +74,15 @@ $cl->reg_cb (
 	       $loop->send;
 	     },
 	     roster_update => sub {
-	       debug_print("Roster update");
+	       ts_print("Roster update");
 	     },
 	     error => sub {
 	       my ($con, $err) = @_;
-	       debug_print("ERROR: " . $err->string);
+	       ts_print("ERROR: " . $err->string);
 	     },
 	     message_error => sub {
 	       my ($con, $err) = @_;
-	       debug_print("message error ", $err->type, $err->text);
+	       ts_print("message error ", $err->type, $err->text);
 	     },
 
 	     # CONTACT MANAGING
@@ -96,28 +96,28 @@ $cl->reg_cb (
 	       $contact->send_subscribed;
 	       # mutual subscription
 	       $contact->send_subscribe;
-	       debug_print($contact->jid, " mutual subscription");
+	       ts_print($contact->jid, " mutual subscription");
 	     },
 	     contact_subscribed => sub {
 	       my ($con, $roster, $contact, $message) = @_;
 	       my $reply = 
 		 $contact->make_message( body => "I'll keep you updated, pal");
 	       $reply->send($con);
-	       debug_print($contact->jid, " is in the roster now");
+	       ts_print($contact->jid, " is in the roster now");
 	     },
 	     contact_did_unsubscribe => sub {
 	       my ($con, $roster, $contact, $message) = @_;
 	       $contact->send_unsubscribe;
-	       debug_print($contact->jid, " is gone now");
+	       ts_print($contact->jid, " is gone now");
 	     },
 	     contact_unsubscribed => sub {
 	       my ($con, $roster, $contact, $message) = @_;
 	       $contact->send_unsubscribed;
-	       debug_print($contact->jid, " unsubscribed");
+	       ts_print($contact->jid, " unsubscribed");
 	     },
 	     message => sub {
 	       my ($con, $msg) = @_;
-	       debug_print("From ", $msg->from, ": ", $msg->any_body);
+	       ts_print("From ", $msg->from, ": ", $msg->any_body);
 	       parse_cmd($con, $msg, $dbh);
 	     },
 	    );
@@ -142,14 +142,6 @@ sub safe_exit {
   exit(0);
 }
 
-## tiny helpers. Everything more serious should go in a module under ./lib
-
-sub debug_print {
-  if ($debug) {
-    my $time = localtime();
-    print "[$time] ", @_, "\n";
-  }
-}
 
 sub pid_print {
   my $pidfile = shift || "bot.pid";
