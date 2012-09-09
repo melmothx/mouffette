@@ -4,8 +4,6 @@ use 5.010001;
 use strict;
 use warnings;
 use utf8;
-use Encode qw/encode_utf8/;
-use Digest::SHA qw/sha1_hex/;
 require Exporter;
 
 our @ISA = qw(Exporter);
@@ -33,8 +31,11 @@ our $VERSION = '0.01';
 
 use AnyEvent::HTTP;
 use Data::Dumper;
-use XML::Feed;
+use XML::FeedPP;
 use Try::Tiny;
+use Encode qw/encode_utf8/;
+use Digest::SHA qw/sha1_hex/;
+use Date::Parse;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Mouffette::Utils qw/debug_print ts_print/;
@@ -182,14 +183,14 @@ sub validate_feed {
       _check_unzip_broken_server($hdr, \$data);
       my $feed;
       try {
-	$feed = XML::Feed->parse(\$data)
+	$feed = XML::FeedPP->new($data, -type => 'string', utf8_flag => 1)
       } catch {
 	warn "caught error: $_";
 	return $form->("Error while parsing XML");
       };
       # and it parses cleanly
-      return $form->("Feed failed: " . XML::Feed->errstr) unless $feed;
-      my $feedtitle = $feed->title || 'No title';
+      return $form->("Invalid feed") unless $feed;
+      my $feedtitle = parse_html($feed->title);
       my $sthfeed =
 	$dbh->prepare('INSERT INTO feeds (handle, url, title) VALUES (?,?,?);');
       $sthfeed->execute($handle, $url, $feedtitle);
@@ -301,40 +302,51 @@ sub xml_feed_parse {
   my ($handle, $data) = @_;
   my $feed;
   try {
-    $feed = XML::Feed->parse($data);
+    $feed = XML::FeedPP->new($$data, -type => 'string', utf8_flag => 1);
   } catch {
     warn "Error on $handle while parsing: $_";
     return;
   };
   unless ($feed) {
-    warn "Error on $handle: ", XML::Feed->errstr, "\n";
+    warn "Error on $handle\n";
     return;
-  }
+  };
   my %items;
   # create a hashref with url => { key => value  }
-  for my $entry ($feed->entries) {
+  foreach my $entry ($feed->get_item()) {
     # HERE WE HAVE A PROBLEM BECAUSE SOME BUGGY FEEDS HAVE THE SAME LINK
-    my $link  = $entry->link || " ";
-    my $title = parse_html($entry->title);
-    my $date = $entry->modified || $entry->issued;
+    my $link  = $entry->link() || " ";
+    my $title = parse_html($entry->title()) || " ";
+    my $date = $entry->pubDate();
     my $realdate;
     if ($date) {
-      $realdate = $date->epoch;
+      try {
+	$realdate = str2time($date);
+      } catch {
+	$realdate = 1;
+      };
     } else {
       $realdate = 1; # which is basically +30 years ago :-)
     }
-    my $body = $entry->content || $entry->summary;
-    my $realbody;
-    if (defined $body) {
-      $realbody = parse_html($body->body);
-    }
+    my $body = parse_html($entry->get("content:encoded") ||  
+			  $entry->description);
     # append the enclosure here, when we get a working module
-
+    my $enclosure = "";
+    # This may fail, which is OK, as said Larsi
+    try {
+      # this is undocument, but appears to work
+      $enclosure = $entry->get_value("enclosure")->{-url};
+    } catch {
+      debug_print($_);
+    };
+    if ($enclosure) {
+      $body .= "Enclosure: $enclosure\n"
+    }
     my %fields;
     $fields{handle} = $handle;
     $fields{title}  = $title;
     $fields{url}    = $link;
-    $fields{body}   = $realbody;
+    $fields{body}   = $body;
     $fields{date}   = $realdate;
 
     my $hash = _feed_make_hash(\%fields);
