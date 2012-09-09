@@ -75,11 +75,11 @@ my %commands = (
 			    call => \&show_all_feeds,
 			   },
 		search => {
-			   help => "search into the existing feeds",
+			   help => "search <site>: search into the existing feeds (I'll scan the urls I follow)",
 			   call => \&search_feeds,
 			  },
 		subscribe => {
-			      help => "subscribe an existing feed",
+			      help => "subscribe <alias>: subscribe an existing feed (try search <my site> to see which feeds are already available",
 			      call => \&subscribe_feed,
 			     },
 	    );
