@@ -116,13 +116,27 @@ sub unsubscribe_feed {
   }
 }
 
+sub _handle_is_valid {
+  my $handle = shift;
+  debug_print "checking if $handle is valid\n";
+  if ($handle =~ m/^[a-zA-Z0-9][\w\.-]+[a-zA-Z0-9]$/s) {
+    return 1;
+  } else {
+    return undef;
+  }
+}
+
 
 sub validate_feed {
   my ($form, $jid, $dbh, $handle, $url) = @_;
+
   # sanity check
   unless ($handle and $url) {
     return $form->("Invalid arguments. See the help");
-  }
+  };
+  unless (_handle_is_valid($handle)) {
+    return $form->("Try a sensible name as feed alias")
+  };
 
   my $sthcheck =
     $dbh->prepare('SELECT handle, url FROM feeds WHERE url = ? or handle = ?;');
