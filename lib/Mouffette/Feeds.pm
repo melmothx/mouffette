@@ -259,18 +259,25 @@ sub insert_feeds {
   # 		  'title' => 'My title'
   # 		   }, { ... }, { ... }}
 
+
+  $dbh->begin_work;
   # now we check if the feeds already exist (based on the hash)
   my $hashes = $dbh->prepare('SELECT hash FROM feeditems where handle = ?');
   $hashes->execute($handle);
   my %exist;
+  my $alreadyfetched = 0;
   while (my ($hash) = $hashes->fetchrow_array) {
     $exist{$hash} = 1;
+    $alreadyfetched = 1;
   };
+  unless ($alreadyfetched) {
+    ts_print("This looks like the first time I fetch $handle, so not spamming");
+  }
   # insert code
   my $insertion = $dbh->prepare('INSERT INTO feeditems
      (date, handle, title, url, body, hash, send) VALUES
-     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  ? ,   1  );');
-				
+     ( ?  ,   ?   ,   ?  ,  ? ,  ?  ,  ? ,   ?  );');
+
   my $deletion =
     $dbh->prepare('DELETE FROM feeditems
                    WHERE hash = ? AND handle = ? AND send = 0');
@@ -284,6 +291,7 @@ sub insert_feeds {
 			$items->{$hashparsed}->{url},
 			$items->{$hashparsed}->{body},
 			$items->{$hashparsed}->{hash},
+			$alreadyfetched, # so 0 if it's the first run
 		       ) unless $exist{$hashparsed};
   };
   foreach my $oldhash (keys %exist) {
@@ -295,6 +303,7 @@ sub insert_feeds {
      WHERE url = (SELECT url FROM feeds WHERE handle = ?);');
   $updategets->execute($hdr->{etag}, $hdr->{'last-modified'}, $handle);
   debug_print("Done with fetching $handle");
+  $dbh->commit;
   return;
 }
 
