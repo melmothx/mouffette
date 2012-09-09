@@ -121,7 +121,7 @@ sub validate_feed {
       if ($hdr->{'x-ratelimit-limit'}) {
 	return $form->("There is a rate limit on this server, sorry");
       }
-      check_unzip_broken_server($hdr, \$data);
+      _check_unzip_broken_server($hdr, \$data);
       my $feed;
       try {
 	$feed = XML::Feed->parse(\$data)
@@ -171,7 +171,7 @@ sub fetch_feeds {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
   	debug_print("Got $url!");
-	check_unzip_broken_server($hdr, \$data);
+	_check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
       } else {
   	debug_print("$handle => $hdr->{Status}");
@@ -486,7 +486,7 @@ sub show_all_feeds {
 }
 
 
-### HELPER
+### HELPERS
 
 sub _format_msg {
   my ($handle, $title, $body, $url) = @_;
@@ -494,7 +494,7 @@ sub _format_msg {
 }
 
 
-sub check_unzip_broken_server {
+sub _check_unzip_broken_server {
   my ($hdr, $gzipped) = @_;
   if ($hdr->{'content-encoding'} and
       $hdr->{'content-encoding'} eq 'gzip') {
