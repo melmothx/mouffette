@@ -548,9 +548,12 @@ sub show_last_feeds {
   my $show = $dbh->prepare('SELECT handle, title, body, url, date FROM feeditems
                             WHERE handle = ? ORDER BY date DESC LIMIT 3');
   $show->execute($handle);
+  my @replies;
   while (my @feed = $show->fetchrow_array) {
-    $form->(_format_msg(@feed));
-  }
+    push @replies, _format_msg(@feed);
+  };
+  my $reply = join("\n", reverse (@replies));
+  $form->($reply);
 }
 
 sub show_all_feeds {
