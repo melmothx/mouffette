@@ -2,7 +2,8 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS feeds (
-       handle	VARCHAR(30) PRIMARY KEY NOT NULL,	
+       handle	VARCHAR(30) PRIMARY KEY NOT NULL,
+       title    TEXT,
        url 	TEXT UNIQUE NOT NULL);
 CREATE TABLE IF NOT EXISTS gets (
           url    TEXT UNIQUE NOT NULL,

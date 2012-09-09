@@ -48,12 +48,12 @@ sub search_feeds {
   my $searchterm = "%" . join('%', @params) . '%';
   debug_print("$jid searching for $searchterm");
   my $results =
-    $dbh->prepare('SELECT handle, url FROM feeds WHERE url LIKE ?
+    $dbh->prepare('SELECT handle, url, title FROM feeds WHERE url LIKE ?
                    ORDER BY url LIMIT 50');
   $results->execute($searchterm);
   my @found;
-  while (my ($handle, $url) = $results->fetchrow_array) {
-    push @found, "$handle => $url";
+  while (my ($handle, $url, $title) = $results->fetchrow_array) {
+    push @found, "$handle => $title <$url>";
   }
 
   if (@found > 40) {
@@ -160,10 +160,10 @@ sub validate_feed {
       };
       # and it parses cleanly
       return $form->("Feed failed: " . XML::Feed->errstr) unless $feed;
-      # ok, all seems valid.
+      my $feedtitle = $feed->title || 'No title';
       my $sthfeed =
-	$dbh->prepare('INSERT INTO feeds (handle, url) VALUES (?, ?);');
-      $sthfeed->execute($handle, $url);
+	$dbh->prepare('INSERT INTO feeds (handle, url, title) VALUES (?,?,?);');
+      $sthfeed->execute($handle, $url, $feedtitle);
       my $sthhttp =
 	$dbh->prepare('INSERT INTO gets  (url) VALUES (?);');
       $sthhttp->execute($url);
@@ -171,8 +171,7 @@ sub validate_feed {
       if (my $error = $sthfeed->err || $sthassc->err || $sthhttp->err) {
 	$form->("errors: $error");
       } else {
-	$form->("Feed from $url, with title " . $feed->title .
-		" subscribed as " . $handle);
+	$form->("Feed from $url, with title $feedtitle subscribed as $handle");
       }
     };
   }
