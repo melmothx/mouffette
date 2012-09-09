@@ -327,16 +327,12 @@ sub xml_feed_parse {
     my $link  = $entry->link() || " ";
     my $title = parse_html($entry->title()) || " ";
     my $date = $entry->pubDate();
-    my $realdate;
+    my $realdate = 0;
     if ($date) {
       try {
 	$realdate = str2time($date);
-      } catch {
-	$realdate = 1;
       };
-    } else {
-      $realdate = 1; # which is basically +30 years ago :-)
-    }
+    };
     my $body = parse_html($entry->get("content:encoded") ||  
 			  $entry->description);
     # append the enclosure here, when we get a working module
@@ -472,7 +468,7 @@ sub dispatch_feeds {
   $dbh->begin_work or warn "NO TRANSACTIONS!: $dbh->errstr";
   # open the feeditems table, retrieve the unseen
   my $tosend =
-    $dbh->prepare('SELECT handle, title, url, body FROM
+    $dbh->prepare('SELECT handle, title, url, body, date FROM
                               feeditems WHERE send = 1 ORDER BY date;');
   my $fdsent =
     $dbh->prepare('UPDATE feeditems SET send = 0
@@ -483,8 +479,8 @@ sub dispatch_feeds {
   $tosend->execute;
   while (my @feed = $tosend->fetchrow_array) {
     # compose message
-    my ($handle, $title, $url, $body) = @feed;
-    my $message = _format_msg($handle, $title, $body, $url);
+    my ($handle, $title, $url, $body, $date) = @feed;
+    my $message = _format_msg(@feed);
     foreach my $buddy (keys %{$feedtable->{$handle}}) {
       if ($feedtable->{$handle}->{$buddy}->{avail}) {
 	debug_print("Sending $url to $buddy");
@@ -549,7 +545,7 @@ sub feed_fetch_and_dispatch {
 sub show_last_feeds {
   my ($form, $jid, $dbh, $handle) = @_;
   return unless $handle;
-  my $show = $dbh->prepare('SELECT handle, title, body, url FROM feeditems
+  my $show = $dbh->prepare('SELECT handle, title, body, url, date FROM feeditems
                             WHERE handle = ? ORDER BY date DESC LIMIT 3');
   $show->execute($handle);
   while (my @feed = $show->fetchrow_array) {
@@ -574,8 +570,14 @@ sub show_all_feeds {
 ### HELPERS
 
 sub _format_msg {
-  my ($handle, $title, $body, $url) = @_;
-  return "$handle: $title\n$body\n$url\n========εοφ========\n\n"
+  my ($handle, $title, $body, $url, $date) = @_;
+  my $realdate;
+  if ($date) {
+    $realdate = gmtime($date) . " GMT";
+  } else {
+    $realdate = " ";
+  };
+  return "$handle: $title\n$realdate\n$body\n$url\n========εοφ========\n\n"
 }
 
 
