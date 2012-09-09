@@ -69,15 +69,17 @@ sub search_feeds {
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
-  my $list = $dbh->prepare('SELECT handle FROM assoc WHERE jid = ?');
+  my $list = $dbh->prepare('SELECT assoc.handle, feeds.title FROM assoc
+                            INNER JOIN feeds ON assoc.handle = feeds.handle
+                            WHERE assoc.jid = ?');
   $list->execute($jid);
   my @subscribed;
-  while (my @row = $list->fetchrow_array) {
-    push @subscribed, shift(@row);
+  while (my ($handle, $feedtitle) = $list->fetchrow_array) {
+    push @subscribed, "$handle ($feedtitle)"
   };
   my $reply;
   if (@subscribed) {
-    $reply = "Your subscriptions: " . join(", ", @subscribed);
+    $reply = "Your subscriptions:\n" . join("\n", @subscribed);
   } else {
     $reply = "No subscriptions";
   }
