@@ -34,7 +34,6 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use Data::Dumper;
 use XML::Feed;
-use XML::Feed::Enclosure;
 use Try::Tiny;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
@@ -329,11 +328,6 @@ sub xml_feed_parse {
     if (defined $body) {
       $realbody = parse_html($body->body);
     }
-
-    if (my $enclosure = $entry->enclosure) {
-      $realbody .= "\nEnclosure: " . $enclosure->url . " (" .
-	$enclosure->type . ")";
-    };
 
     my %fields;
     $fields{handle} = $handle;
