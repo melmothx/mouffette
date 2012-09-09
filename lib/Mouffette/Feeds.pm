@@ -21,6 +21,7 @@ our @EXPORT_OK = qw(validate_feed
 		    delete_queue
 		    retrieve_queue
 		    flush_queue
+		    search_feeds
 		    xml_feed_parse
 		    show_last_feeds
 		    show_all_feeds
@@ -35,6 +36,35 @@ use Try::Tiny;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Mouffette::Utils qw/debug_print/;
+
+sub search_feeds {
+  my ($form, $jid, $dbh, @args) = @_;
+  my @params;
+  foreach my $term (@args) {
+    push @params, split(/\W+/, $term);
+  };
+  return unless @params;
+  my $searchterm = "%" . join('%', @params) . '%';
+  debug_print("$jid searching for $searchterm");
+  my $results =
+    $dbh->prepare('SELECT handle, url FROM feeds WHERE url LIKE ?
+                   ORDER BY url LIMIT 50');
+  $results->execute($searchterm);
+  my @found;
+  while (my ($handle, $url) = $results->fetchrow_array) {
+    push @found, "$handle => $url";
+  }
+
+  if (@found > 40) {
+    return $form->(join("\n", @found) . "\nTry to be more specific...");
+  }
+  elsif (@found) {
+    return $form->(join("\n", @found));
+  }
+  else {
+    return $form->("No feed found. Feel free to add it");
+  }
+}
 
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;

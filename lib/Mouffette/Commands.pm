@@ -23,6 +23,7 @@ use Mouffette::Feeds qw/validate_feed
 			show_last_feeds
 			show_all_feeds
 			list_feeds
+			search_feeds
 			delete_queue
 			retrieve_queue
 			unsubscribe_feed/;
@@ -72,6 +73,10 @@ my %commands = (
 			    help => "showall <alias>: show all the entry of the feed known as <alias>",
 			    call => \&show_all_feeds,
 			   },
+		search => {
+			   help => "search into the existing feeds",
+			   call => \&search_feeds,
+			  },
 	    );
 
 
