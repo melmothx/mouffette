@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS feeditems (
        body 	TEXT NOT NULL,
        send     INTEGER,
        hash 	TEXT,
-       CONSTRAINT handleurl UNIQUE (handle, hash),
+       CONSTRAINT handleurl UNIQUE (hash, handle),
        FOREIGN KEY(handle) REFERENCES feeds(handle) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS queue (
        id    	INTEGER PRIMARY KEY,
