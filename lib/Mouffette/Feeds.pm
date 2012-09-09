@@ -37,7 +37,7 @@ use XML::Feed;
 use Try::Tiny;
 use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
-use Mouffette::Utils qw/debug_print/;
+use Mouffette::Utils qw/debug_print ts_print/;
 
 sub _http_our_header {
   my $header = {
@@ -234,8 +234,10 @@ sub fetch_feeds {
   	debug_print("Got $url!");
 	_check_unzip_broken_server($hdr, \$data);
 	insert_feeds($dbh, $handle, \$data, $hdr);
+      } elsif ($hdr->{Status} eq "304") {
+	debug_print("$handle not modified (304)");
       } else {
-  	debug_print("$handle => $hdr->{Status}");
+  	ts_print("$handle => $hdr->{Status}");
       }
     };
   }
