@@ -19,12 +19,12 @@ our $VERSION = '0.01';
 sub debug_print {
   return unless $ENV{MUFFDEBUG};
   my $time = localtime();
-  print "[$time] ", @_, "\n";
+  print "[$time] ", join(" ", @_), "\n";
 }
 
 sub ts_print {
   my $time = localtime();
-  print "[$time] ", @_, "\n";
+  print "[$time] ", join(" ", @_), "\n";
 }
 
 
