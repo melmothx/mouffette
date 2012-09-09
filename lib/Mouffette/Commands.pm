@@ -24,6 +24,7 @@ use Mouffette::Feeds qw/validate_feed
 			show_all_feeds
 			list_feeds
 			search_feeds
+			subscribe_feed
 			delete_queue
 			retrieve_queue
 			unsubscribe_feed/;
@@ -77,6 +78,10 @@ my %commands = (
 			   help => "search into the existing feeds",
 			   call => \&search_feeds,
 			  },
+		subscribe => {
+			      help => "subscribe an existing feed",
+			      call => \&subscribe_feed,
+			     },
 	    );
 
 

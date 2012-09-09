@@ -18,6 +18,7 @@ our @EXPORT_OK = qw(validate_feed
 		    unsubscribe_feed
 		    list_feeds
 		    feed_fetch_and_dispatch
+		    subscribe_feed
 		    delete_queue
 		    retrieve_queue
 		    flush_queue
@@ -119,11 +120,16 @@ sub unsubscribe_feed {
 sub _handle_is_valid {
   my $handle = shift;
   debug_print "checking if $handle is valid\n";
-  if ($handle =~ m/^[a-zA-Z0-9][\w\.-]+[a-zA-Z0-9]$/s) {
+  if ($handle =~ m/^[a-zA-Z0-9][\w\.-]*[a-zA-Z0-9]$/s) {
     return 1;
   } else {
     return undef;
   }
+}
+
+sub subscribe_feed {
+  my ($form, $jid, $dbh, $handle) = @_;
+  return validate_feed($form, $jid, $dbh, $handle, 1);
 }
 
 
@@ -139,8 +145,8 @@ sub validate_feed {
   };
 
   my $sthcheck =
-    $dbh->prepare('SELECT handle, url FROM feeds WHERE url = ? or handle = ?;');
-  $sthcheck->execute($url, $handle);
+    $dbh->prepare('SELECT handle, url FROM feeds WHERE handle = ? or url = ?;');
+  $sthcheck->execute($handle, $url);
   if (my $checkerror = $sthcheck->err) {
     return $form->($checkerror);
   }
@@ -151,8 +157,7 @@ sub validate_feed {
     ($handle, $url) = @feedrow;
     # yes? ok, add the association and notify.
     $sthassc->execute($handle, $jid);
-    $form->("Feed already present: you're subscribed to " . 
-	    "$handle ($url) now");
+    return $form->("You're subscribed to " . "$handle ($url) now");
   } else {
     # fetch the feed. Everything is passed to the AnyEvent::HTTP
     # closure.
