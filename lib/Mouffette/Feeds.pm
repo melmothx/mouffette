@@ -39,6 +39,13 @@ use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Mouffette::Utils qw/debug_print/;
 
+sub _http_our_header {
+  my $header = {
+		'User-Agent' => "Mouffette RSS->XMPP gateway v.0.2" 
+	       };
+  return $header;
+};
+
 sub search_feeds {
   my ($form, $jid, $dbh, @args) = @_;
   my @params;
@@ -161,7 +168,8 @@ sub validate_feed {
   } else {
     # fetch the feed. Everything is passed to the AnyEvent::HTTP
     # closure.
-    http_get $url, sub {
+    my $standardhdr = _http_our_header();
+    http_get $url, headers => $standardhdr, sub {
       my ($data, $hdr) = @_;
       # check if it's valid
       unless ($hdr->{Status} eq "200") {
@@ -214,13 +222,13 @@ sub fetch_feeds {
   while (@$targets) {
     # now we prepare the code to do a conditional get, to save resources
     my ($handle, $url, $etag, $time) = @{shift @$targets};
-    my %myheaders = ( 'User-Agent' => "Mouffette RSS->XMPP gateway v.0.1"  );
+    my $myheaders = _http_our_header();
     if ($etag) {
-      $myheaders{'If-None-Match'} = $etag;
+      $myheaders->{'If-None-Match'} = $etag;
     } elsif ($time) {
-      $myheaders{'If-Modified-Since'} = $time;
+      $myheaders->{'If-Modified-Since'} = $time;
     };
-    http_get $url, headers => \%myheaders, sub {
+    http_get $url, headers => $myheaders, sub {
       my ($data, $hdr) = @_;
       if ($hdr->{Status} eq "200") {
   	debug_print("Got $url!");
