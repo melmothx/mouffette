@@ -232,9 +232,14 @@ sub fetch_feeds {
     };
     http_get $url, headers => $myheaders, sub {
       my ($data, $hdr) = @_;
+      return unless defined $data;
       if ($hdr->{Status} eq "200") {
   	debug_print("Got $url!");
 	_check_unzip_broken_server($hdr, \$data);
+	if ($data eq "") {
+	  debug_print("But got no data....");
+	  return;
+	}
 	insert_feeds($dbh, $handle, \$data, $hdr);
       } elsif ($hdr->{Status} eq "304") {
 	debug_print("$handle not modified (304)");
