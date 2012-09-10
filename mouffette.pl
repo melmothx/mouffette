@@ -90,6 +90,13 @@ $cl->reg_cb (
 	     message_error => sub {
 	       my ($con, $err) = @_;
 	       ts_print("message error ", $err->type, $err->text);
+	       ts_print("Appending dump to errors.log");
+	       open (my $fh, ">>", "errors.log") or
+		 return warn "!!!! Couldn't open error log $!\n";
+	       print $fh "======" . localtime() . "======\n",
+		                    Dumper($err), 
+		         "===============================\n";
+	       close $fh;
 	     },
 
 	     # CONTACT MANAGING
