@@ -337,11 +337,15 @@ sub xml_feed_parse {
     my $body = parse_html($entry->get("content:encoded") ||  
 			  $entry->description);
     # append the enclosure here, when we get a working module
-    my $enclosure = "";
+    my $enclosure;
     # This may fail, which is OK, as said Larsi
     try {
       # this is undocument, but appears to work
-      $enclosure = $entry->get_value("enclosure")->{-url};
+      my $enclosure_val = $enclosure = $entry->get_value("enclosure");
+      if (defined $enclosure_val) {
+	$enclosure = $enclosure_val->{-url} .
+	  " (" . $enclosure_val->{-type} . ")";
+      }
     } catch {
       debug_print($_);
     };
