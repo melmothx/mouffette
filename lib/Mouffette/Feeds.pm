@@ -63,7 +63,7 @@ sub search_feeds {
   $results->execute($searchterm);
   my @found;
   while (my ($handle, $url, $title) = $results->fetchrow_array) {
-    push @found, "$handle => $title <$url>";
+    push @found, "feed $handle $url ($title)";
   }
 
   if (@found > 40) {
