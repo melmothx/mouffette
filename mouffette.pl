@@ -8,7 +8,9 @@ binmode STDERR, ":encoding(utf-8)";
 
 use AnyEvent;
 use AnyEvent::XMPP::IM::Connection;
-# use AnyEvent::Strict; not in production
+use AnyEvent::HTTPD;
+# use AnyEvent::Strict; # not in production
+use DBI;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
 use Mouffette::Utils qw/debug_print ts_print/;
@@ -18,7 +20,8 @@ use Mouffette::Feeds qw(
 			 dispatch_feeds
 			 flush_queue
 		       );
-use DBI;
+use Mouffette::WebUI qw/wi_report_status/;
+
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
@@ -135,6 +138,17 @@ $cl->reg_cb (
 	       parse_cmd($con, $msg, $dbh);
 	     },
 	    );
+
+my $httpd = AnyEvent::HTTPD->new (port => 9090);
+$httpd->reg_cb (
+		'' => sub {
+		  my ($httpd, $req) = @_;
+		  $req->respond ({ content => ['text/html',
+					       wi_report_status($dbh)
+					      ]});
+		},
+	       );
+
 $cl->connect();
 
 $SIG{'INT'} = \&safe_exit;
