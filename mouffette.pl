@@ -8,7 +8,7 @@ binmode STDERR, ":encoding(utf-8)";
 
 use AnyEvent;
 use AnyEvent::XMPP::IM::Connection;
-use AnyEvent::Strict;
+# use AnyEvent::Strict; not in production
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
 use Mouffette::Utils qw/debug_print ts_print/;
