@@ -43,7 +43,7 @@ use Mouffette::Utils qw/debug_print ts_print/;
 
 sub _http_our_header {
   my $header = {
-		'User-Agent' => "Mouffette RSS->XMPP gateway v.0.2" 
+		'User-Agent' => "Mozilla (Mouffette RSS->XMPP gateway v.0.3)" 
 	       };
   return $header;
 };
