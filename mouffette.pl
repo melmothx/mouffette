@@ -139,13 +139,21 @@ $cl->reg_cb (
 	     },
 	    );
 
-my $httpd = AnyEvent::HTTPD->new (port => 9090);
+my $http_status_host = $conf->{bot}->{statushost} || "127.0.0.1";
+my $http_status_port = $conf->{bot}->{statusport} || "9876";
+
+my $httpd = AnyEvent::HTTPD->new (
+				  host => $http_status_host,
+				  port => $http_status_port,
+				  allowed_methods => [ 'GET' ],
+				 );
 $httpd->reg_cb (
 		'' => sub {
 		  my ($httpd, $req) = @_;
 		  $req->respond ({ content => ['text/html',
 					       wi_report_status($dbh)
 					      ]});
+		  $httpd->stop_request;
 		},
 	       );
 

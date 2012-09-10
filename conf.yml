@@ -7,4 +7,6 @@ connection:
 bot:
   loopinterval: 60
   db: mybot.db
+  statushost: "127.0.0.1"
+  statusport: 9876
 
