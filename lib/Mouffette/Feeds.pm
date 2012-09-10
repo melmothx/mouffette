@@ -266,14 +266,16 @@ sub insert_feeds {
   my $hashes = $dbh->prepare('SELECT hash FROM feeditems where handle = ?');
   $hashes->execute($handle);
   my %exist;
+
+  while (my ($hash) = $hashes->fetchrow_array) { $exist{$hash} = 1; };
+
   my $alreadyfetched = 0;
-  while (my ($hash) = $hashes->fetchrow_array) {
-    $exist{$hash} = 1;
-    $alreadyfetched = 1;
-  };
-  unless ($alreadyfetched) {
+  if (keys %exist) {
+    $alreadyfetched = 1
+  } else {
     ts_print("This looks like the first time I fetch $handle, so not spamming");
   }
+
   # insert code
   my $insertion = $dbh->prepare('INSERT INTO feeditems
      (date, handle, title, url, body, hash, send) VALUES
