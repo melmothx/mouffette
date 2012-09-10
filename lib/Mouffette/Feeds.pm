@@ -317,6 +317,7 @@ sub xml_feed_parse {
     $feed = XML::FeedPP->new($$data, -type => 'string', utf8_flag => 1);
   } catch {
     warn "Error on $handle while parsing: $_";
+    ts_print Dumper($data);
     return;
   };
   unless ($feed) {
