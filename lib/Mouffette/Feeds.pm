@@ -15,7 +15,8 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(validate_feed
 		    unsubscribe_feed
 		    list_feeds
-		    feed_fetch_and_dispatch
+		    dispatch_feeds
+		    fetch_feeds
 		    subscribe_feed
 		    delete_queue
 		    retrieve_queue
@@ -529,16 +530,6 @@ sub delete_queue {
   my $deletion = $dbh->prepare('DELETE FROM queue WHERE jid = ?');
   $deletion->execute($jid);
   $form->("Your queue has been deleted");
-}
-
-# and this is just the glue
-
-sub feed_fetch_and_dispatch {
-  my ($dbh, $con) = @_;
-  # look in the feeds table,
-  dispatch_feeds($dbh, $con);
-  fetch_feeds($dbh);
-  # look in the assoc table,
 }
 
 

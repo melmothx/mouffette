@@ -14,7 +14,8 @@ use lib './lib';
 use Mouffette::Utils qw/debug_print ts_print/;
 use Mouffette::Commands qw/parse_cmd/;
 use Mouffette::Feeds qw(
-			 feed_fetch_and_dispatch
+			 fetch_feeds
+			 dispatch_feeds
 			 flush_queue
 		       );
 use DBI;
@@ -44,10 +45,11 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "",
 $dbh->do('PRAGMA foreign_keys = ON;');
 
 
+my $reconnect_at_recv = 1;
 # connection loop
 my $loop = AE::cv;
 my $cl = AnyEvent::XMPP::IM::Connection->new (%{$conf->{connection}});
-my $w; # the watcher;
+my ($fetchloop, $dispatchloop); # the timers
 my $interval = $conf->{bot}->{loopinterval};
 
 # Callback functions. The first argument to each callback is always
@@ -57,9 +59,13 @@ $cl->reg_cb (
 	     session_ready => sub {
 	       my ($con) = @_;
 	       ts_print("session ready, starting watcher!");
-	       $w = AE::timer 2, $interval, sub {
-		 feed_fetch_and_dispatch($dbh, $con);
+	       $fetchloop = AE::timer 1, $interval, sub {
+		 fetch_feeds($dbh);
 	       };
+	       # after 10 seconds we start the dispatcher
+	       $dispatchloop = AE::timer 10, $interval, sub {
+		 dispatch_feeds($dbh, $con);
+	       }
 	     },
 	     connect => sub {
 	       ts_print("Connected");
@@ -70,7 +76,8 @@ $cl->reg_cb (
 	     disconnect => sub {
 	       my ($con, $h, $p, $reason) = @_;
 	       warn "Disconnected from $h:$p: $reason";
-	       undef $w;
+	       undef $fetchloop;
+	       undef $dispatchloop;
 	       $loop->send;
 	     },
 	     roster_update => sub {
@@ -129,6 +136,12 @@ $SIG{'QUIT'} = \&safe_exit;
 
 $loop->recv;
 $dbh->disconnect or warn $dbh->errstr;
+
+print "DB disconnected cleanly\n";
+
+exit 0 unless $reconnect_at_recv;
+
+
 # here we're out of the loop (hopefully);
 $ENV{PATH} = "/bin:/usr/bin"; # Minimal PATH.
 my @command = ('perl', $0, @ARGV);
@@ -137,9 +150,8 @@ exec @command or die "can't exec myself: $!\n";
 sub safe_exit {
   my ($sig) = shift;
   print "Caught a SIG$sig... ";
-  $dbh->disconnect or warn $dbh->errstr;
-  print "DB disconnected, exiting cleanly\n";
-  exit(0);
+  $reconnect_at_recv = 0;
+  $loop->send;
 }
 
 
