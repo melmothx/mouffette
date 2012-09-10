@@ -2,3 +2,4 @@
 muf.yml
 bot.pid
 *.db
+nohup.out
