@@ -268,6 +268,8 @@ sub insert_feeds {
   # 		  'title' => 'My title'
   # 		   }, { ... }, { ... }}
 
+  my $countnew = scalar (keys %$items);
+  return if $countnew == 0; # we got an empty set
 
   $dbh->begin_work;
   # now we check if the feeds already exist (based on the hash)
@@ -277,12 +279,20 @@ sub insert_feeds {
 
   while (my ($hash) = $hashes->fetchrow_array) { $exist{$hash} = 1; };
 
+  my $countexisting = scalar (keys %exist);
+  unless ($countexisting == $countnew) {
+    ts_print("The number of articles for $handle passed"
+	     . "from $countexisting to $countnew");
+  }
+
   my $alreadyfetched = 0;
-  if (keys %exist) {
+  if ($countexisting) {
     $alreadyfetched = 1
   } else {
     ts_print("This looks like the first time I fetch $handle, so not spamming");
   }
+
+  
 
   # insert code
   my $insertion = $dbh->prepare('INSERT INTO feeditems
