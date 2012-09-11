@@ -385,6 +385,8 @@ sub _feed_make_hash {
 sub parse_html {
   my $html = shift;
   return " " unless $html;
+  return "HTML data" unless (ref $html eq "");
+  #  warn "Parsing ", Dumper($html);
   my $p = HTML::PullParser->new(
 				doc   => $html,
 				start => '"S", tagname',
