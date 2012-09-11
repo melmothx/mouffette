@@ -41,6 +41,9 @@ use HTML::PullParser;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 use Mouffette::Utils qw/debug_print ts_print/;
 
+use XML::TreePP;
+my $treewriter = XML::TreePP->new();
+
 sub _http_our_header {
   my $header = {
 		'User-Agent' => "Mozilla (Mouffette RSS->XMPP gateway v.0.3)" 
@@ -342,6 +345,7 @@ sub xml_feed_parse {
 	$realdate = str2time($date);
       };
     };
+    #    warn Dumper($entry->get("content:encoded"));
     my $body = parse_html($entry->get("content:encoded") ||  
 			  $entry->description);
     # append the enclosure here, when we get a working module
@@ -385,7 +389,12 @@ sub _feed_make_hash {
 sub parse_html {
   my $html = shift;
   return " " unless $html;
-  return "HTML data" unless (ref $html eq "");
+  if (ref $html eq "HASH") {
+    my $tree = $treewriter->write($html);
+    $html = $tree;
+    undef $tree;
+  };
+  return "Unknown data" unless (ref $html eq "");
   #  warn "Parsing ", Dumper($html);
   my $p = HTML::PullParser->new(
 				doc   => $html,
