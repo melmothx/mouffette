@@ -21,7 +21,7 @@ use Mouffette::Feeds qw(
 			 flush_queue
 		       );
 use Mouffette::WebUI qw/wi_report_status/;
-
+use Data::Dumper;
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
