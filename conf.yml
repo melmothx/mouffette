@@ -5,7 +5,7 @@ connection:
   resource: 'AnyEvent::XMPP::Devel'
   connect_timeout: 300
 bot:
-  loopinterval: 60
+  loopinterval: 600
   db: mybot.db
   statushost: "127.0.0.1"
   statusport: 9876

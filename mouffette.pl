@@ -82,7 +82,7 @@ $cl->reg_cb (
 		 fetch_feeds($dbh);
 	       };
 	       # after 10 seconds we start the dispatcher
-	       $dispatchloop = AE::timer 10, $interval, sub {
+	       $dispatchloop = AE::timer 30, $interval, sub {
 		 dispatch_feeds($dbh, $con);
 	       }
 	     },
