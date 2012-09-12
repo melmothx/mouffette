@@ -46,7 +46,8 @@ my $treewriter = XML::TreePP->new();
 
 sub _http_our_header {
   my $header = {
-		'User-Agent' => "Mozilla (Mouffette RSS->XMPP gateway v.0.3)" 
+		'User-Agent' => "Mozilla (Mouffette RSS->XMPP gateway v.0.3) https://github.com/melmothx/mouffette/blob/master/UserAgent.md",
+		'Accept-Encoding' => 'gzip',
 	       };
   return $header;
 };
@@ -618,7 +619,7 @@ sub _check_unzip_broken_server {
       $$gzipped = $uncompressed;
       undef $uncompressed;
     } else {
-      warn "Uncompressing failed\n";
+      warn "Uncompressing failed\n" . Dumper($hdr);
     }
   }
 }
