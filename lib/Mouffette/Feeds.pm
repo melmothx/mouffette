@@ -625,3 +625,19 @@ sub _check_unzip_broken_server {
 
 
 1;
+
+
+=head1 AUTHOR
+
+Marco Pessotto, marco@theanarchistlibrary.org
+
+=head1 COPYRIGHT AND LICENSE
+
+No Copyright
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.10.1 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut
+
