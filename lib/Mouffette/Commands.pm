@@ -3,6 +3,7 @@ package Mouffette::Commands;
 use 5.010001;
 use strict;
 use warnings;
+use utf8;
 require Exporter;
 
 
@@ -122,7 +123,8 @@ sub give_help {
   if ($arg && (exists $commands{$arg})) {
     $answer = $commands{$arg}->{help};
   } else {
-    $answer = "Available commands: " . join(", ", sort(keys %commands));
+    $answer = "Available commands: " . join(", ", sort(keys %commands))
+      . "\nTell me “help feed” to see how to add new feeds";
   }
   $form->($answer);
 }
