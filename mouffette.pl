@@ -29,7 +29,7 @@ use AnyEvent::HTTPD;
 use DBI;
 use YAML::Any qw/LoadFile Dump/;
 use lib './lib';
-use Mouffette::Utils qw/debug_print ts_print/;
+use Mouffette::Utils qw/debug_print ts_print roster_check_max_client/;
 use Mouffette::Commands qw/parse_cmd/;
 use Mouffette::Feeds qw(
 			 fetch_feeds
@@ -69,7 +69,9 @@ my $reconnect_at_recv = 1;
 my $loop = AE::cv;
 my $cl = AnyEvent::XMPP::IM::Connection->new (%{$conf->{connection}});
 my ($fetchloop, $dispatchloop); # the timers
-my $interval = $conf->{bot}->{loopinterval};
+my $interval = $conf->{bot}->{loopinterval} || 600;
+my $maxclients = $conf->{bot}->{maxclients} || 100;
+
 
 # Callback functions. The first argument to each callback is always
 # the AnyEvent::XMPP::IM::Connection object itself.
@@ -126,6 +128,16 @@ $cl->reg_cb (
 	     },
 	     contact_request_subscribe => sub {
 	       my ($con, $roster, $contact, $message) = @_;
+	       ts_print ($contact->jid, " required subscription");
+	       unless (roster_check_max_client($con, $maxclients)) {
+		 ts_print ("Max client reached!");
+		 my $msg = $contact->make_message(
+						  body => 
+						  "sorry, max client reached!");
+		 $msg->send($con);
+		 $contact->send_unsubscribed;
+		 return;
+	       }
 	       $contact->send_subscribed;
 	       # mutual subscription
 	       $contact->send_subscribe;
@@ -167,7 +179,10 @@ $httpd->reg_cb (
 		'' => sub {
 		  my ($httpd, $req) = @_;
 		  $req->respond ({ content => ['text/html',
-					       wi_report_status($dbh)
+					       wi_report_status(
+								$dbh,
+								$maxclients
+							       )
 					      ]});
 		  $httpd->stop_request;
 		},

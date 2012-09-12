@@ -12,7 +12,11 @@ our @ISA = qw(Exporter);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-our @EXPORT_OK = qw(debug_print ts_print);
+our @EXPORT_OK = qw(debug_print
+		    ts_print
+		    roster_check_max_client
+		    jid_is_in_roster
+		  );
 
 our $VERSION = '0.01';
 
@@ -28,6 +32,31 @@ sub ts_print {
 }
 
 
+sub roster_check_max_client {
+  my ($con, $max) = @_;
+  my $roster = $con->get_roster;
+  unless ($roster->is_retrieved) {
+    ts_print "Roster is not retrieved yet!";
+    return 0;
+  }
+  my $existing = scalar $roster->get_contacts;
+  if ($existing < $max) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub jid_is_in_roster {
+  my ($con, $jid) = @_;
+  if (my $contact = $con->get_roster->get_contact($jid)) {
+    if ($contact->is_on_roster) {
+      debug_print "$jid is on the roster";
+      return 1;
+    }
+  }
+  return 0;
+}
 
 
 1;

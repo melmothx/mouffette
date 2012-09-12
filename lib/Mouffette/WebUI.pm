@@ -19,7 +19,7 @@ our $VERSION = '0.01';
 use HTML::Entities;
 
 sub wi_report_status {
-  my $dbh = shift;
+  my ($dbh, $max) = @_;
 
   my @rows = ('<table id="feeds"><tr>',
 	      '<th>Alias</th>',
@@ -50,7 +50,7 @@ sub wi_report_status {
   push @rows, '</tr></table>';
 
   return '<div id="botstatus">'
-    . "<p>Serving $feedcount feeds to $usercount user!</p>"
+    . "<p>Serving $feedcount feeds to $usercount user (max $max)!</p>"
     . join("", @rows) . '</div>';
 }
 

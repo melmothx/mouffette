@@ -20,6 +20,7 @@ our $VERSION = '0.01';
 use AnyEvent::HTTP;
 use AnyEvent::XMPP::Util qw/bare_jid/;
 use Data::Dumper;
+use Mouffette::Utils qw/jid_is_in_roster ts_print debug_print/;
 use Mouffette::Feeds qw/validate_feed
 			show_last_feeds
 			show_all_feeds
@@ -91,6 +92,12 @@ sub parse_cmd {
   my @args = split(/\s+/, $msg->any_body);
   my $cmd = shift @args;
   my $jid = bare_jid($msg->from);
+
+  # ignore external messages 
+  unless (jid_is_in_roster($con, $jid)) {
+    ts_print("External request from $jid, ignoring");
+    return;
+  }
   # closure with the code to send a message. Basically, we know that
   # the command wants an answer, so we pack $con, $msg there and pass
   # it, along with the bare jid for db operations

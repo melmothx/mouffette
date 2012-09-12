@@ -9,4 +9,6 @@ bot:
   db: mybot.db
   statushost: "127.0.0.1"
   statusport: 9876
+  maxclients: 100
+
 
