@@ -5,11 +5,13 @@ Mouffette is an RSS->XMPP/Jabber gateway. It let you to receive the RSS/Atom fee
 
 ## Usage
 
-If you just want to read the RSS/Atom feeds in your XMPP/Jabber client, without installing anything, you are free to add xmpp:mouffette@laltromondo.dynalias.net to your roster, and add your feeds sending to the bot a message with, for example,  `feed mouffette https://github.com/melmothx/mouffette/commits/master.atom` or `help`. This account is always running the latest and the greatest. You can add as many feed you want.
+If you just want to read the RSS/Atom feeds in your XMPP/Jabber client, without installing anything, you are free to add xmpp:mouffette@laltromondo.dynalias.net to your roster, and add your feeds sending to the bot a message with, for example,  `feed mouffette https://github.com/melmothx/mouffette/commits/master.atom` or `help`. This account is always running the latest and the greatest version. You can add as many feeds you want. See http://laltromondo.dynalias.net/mouffette/ for information about this instance.
 
 ## Installation
 
-Mouffette is written in Perl and AnyEvent. This is the list of the required modules to be installed from the cpan or, on a Debian box starting from wheezy (squeeze has unavailable or outdated modules)
+Mouffette is written in Perl with AnyEvent modules (see below).
+
+This is the list of the required modules to be installed from the CPAN or, on a Debian box starting from wheezy (squeeze has unavailable or outdated modules)
 
  * AnyEvent (libanyevent-perl)
  * AnyEvent::XMPP (libanyevent-xmpp-perl)
