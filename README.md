@@ -1,7 +1,7 @@
 mouffette
 =========
 
-Mouffette is an RSS->XMPP/Jabber gateway. It let you to receive the RSS/Atom feeds in your Jabber client or application.
+Mouffette is an RSS->XMPP/Jabber gateway. It lets you to receive the RSS/Atom feeds in your Jabber client or application.
 
 ## Usage
 
