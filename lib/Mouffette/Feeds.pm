@@ -392,8 +392,7 @@ sub xml_feed_parse {
 
 sub _feed_make_hash {
   my $item = shift;
-  return sha1_hex($item->{handle} . $item->{title} . $item->{url} .
-    $item->{body}); # nothing should be undefined here.
+  return sha1_hex($item->{handle} . $item->{title} . $item->{url});
 }
 
 # our parser
