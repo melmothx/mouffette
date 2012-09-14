@@ -38,6 +38,8 @@ use Mouffette::Feeds qw(
 		       );
 use Mouffette::WebUI qw/wi_report_status/;
 use Data::Dumper;
+use Try::Tiny;
+
 
 die "The first parameter must be the configuration file\n" unless $ARGV[0];
 die "Missing configuration file\n" unless -f $ARGV[0];
@@ -118,6 +120,7 @@ $cl->reg_cb (
 		                    Dumper($err), 
 		         "===============================\n";
 	       close $fh;
+	       try_to_recover_message_error($con, $err->xml_node);
 	     },
 
 	     # CONTACT MANAGING
@@ -220,5 +223,48 @@ sub pid_print {
   open (my $fh, ">", $pidfile) or die "Can't write pid file: $!\n";
   print $fh $$;
   close $fh;
+}
+
+### this is an HACK because we try to get the internals of the object
+### AE::XMPP::Node
+
+sub try_to_recover_message_error {
+  my ($con, $error) = @_;
+  my $success = 1;
+  my $body;
+  my $to;
+  try {
+    $to = $error->[4]->[1]->[1]->[4];
+    foreach my $line (@{$error->[4]->[1]->[1]->[4]}) {
+      next unless (ref $line eq 'ARRAY');
+      next if $line->[0] eq '2';
+      if ($line->[0] eq '1') {
+	$body .= $line->[1];
+      }
+    }
+  } catch {
+    ts_print($_);
+    $success = 0;
+  };
+  return unless ($success and $to and $body);
+  my $msg;
+  try {
+    $msg = $con->get_roster->get_contact($to)->make_message(
+							    body => "RT\n$body",
+							    type => 'chat',
+							   );
+  } catch {
+    ts_print("Couldn't get contact $to: $_");
+    return;
+  };
+  return unless defined $msg;
+  ts_print("Resending message in 5 minutes");
+  # here we basically create a memory leak
+  my $retry; $retry = AE::timer 0, 300, sub {
+    ts_print "Resending message to $to now!";
+    $msg->send($con);
+    # but here we free it (hopefully),
+    undef $retry;
+  };
 }
 
