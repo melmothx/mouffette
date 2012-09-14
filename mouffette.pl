@@ -234,7 +234,7 @@ sub try_to_recover_message_error {
   my $body;
   my $to;
   try {
-    $to = $error->[4]->[1]->[1]->[4];
+    $to = $error->[2]->{from};
     foreach my $line (@{$error->[4]->[1]->[1]->[4]}) {
       next unless (ref $line eq 'ARRAY');
       next if $line->[0] eq '2';
