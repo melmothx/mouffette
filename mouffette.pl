@@ -260,7 +260,7 @@ sub try_to_recover_message_error {
   return unless defined $msg;
   ts_print("Resending message in 5 minutes");
   # here we basically create a memory leak
-  my $retry; $retry = AE::timer 0, 300, sub {
+  my $retry; $retry = AE::timer 300, 0, sub {
     ts_print "Resending message to $to now!";
     $msg->send($con);
     # but here we free it (hopefully),
