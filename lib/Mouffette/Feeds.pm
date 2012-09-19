@@ -63,7 +63,7 @@ sub search_feeds {
   debug_print("$jid searching for $searchterm");
   my $results =
     $dbh->prepare('SELECT handle, url, title FROM feeds WHERE url LIKE ?
-                   ORDER BY url LIMIT 50');
+		   ORDER BY url LIMIT 50');
   $results->execute($searchterm);
   my @found;
   while (my ($handle, $url, $title) = $results->fetchrow_array) {
@@ -84,8 +84,8 @@ sub search_feeds {
 sub list_feeds {
   my ($form, $jid, $dbh) = @_;
   my $list = $dbh->prepare('SELECT assoc.handle, feeds.title FROM assoc
-                            INNER JOIN feeds ON assoc.handle = feeds.handle
-                            WHERE assoc.jid = ?');
+			    INNER JOIN feeds ON assoc.handle = feeds.handle
+			    WHERE assoc.jid = ?');
   $list->execute($jid);
   my @subscribed;
   while (my ($handle, $feedtitle) = $list->fetchrow_array) {
@@ -293,7 +293,7 @@ sub insert_feeds {
     ts_print("This looks like the first time I fetch $handle, so not spamming");
   }
 
-  
+
 
   # insert code
   my $insertion = $dbh->prepare('INSERT INTO feeditems
@@ -302,7 +302,7 @@ sub insert_feeds {
 
   my $deletion =
     $dbh->prepare('DELETE FROM feeditems
-                   WHERE hash = ? AND handle = ? AND send = 0');
+		   WHERE hash = ? AND handle = ? AND send = 0');
 
   # do
   foreach my $hashparsed (keys %$items) {
@@ -357,7 +357,7 @@ sub xml_feed_parse {
       };
     };
     #    warn Dumper($entry->get("content:encoded"));
-    my $body = parse_html($entry->get("content:encoded") ||  
+    my $body = parse_html($entry->get("content:encoded") ||
 			  $entry->description);
     # append the enclosure here, when we get a working module
     my $enclosure;
@@ -447,7 +447,7 @@ sub parse_html {
 ####################################################################
 #                     DISPATCH                                     #
 ####################################################################
-    ## 
+    ##
     # $contacts = {
      # $feeds = { lib => {
 
@@ -463,9 +463,9 @@ sub parse_html {
 # 				 }
 # 		 },
 # 	  next => { user => { }, user, { } },
-	  
+
 sub get_availables {
-  # build a hash with code refs for sending message and the followed feeds; 
+  # build a hash with code refs for sending message and the followed feeds;
   my ($dbh, $con) = @_;
   my $roster = $con->get_roster;
   return unless $roster->is_retrieved;
@@ -503,10 +503,10 @@ sub dispatch_feeds {
   # open the feeditems table, retrieve the unseen
   my $tosend =
     $dbh->prepare('SELECT handle, title, url, body, date FROM
-                              feeditems WHERE send = 1 ORDER BY date;');
+			      feeditems WHERE send = 1 ORDER BY date;');
   my $fdsent =
     $dbh->prepare('UPDATE feeditems SET send = 0
-                            WHERE send = 1 AND url = ? AND handle = ?;');
+			    WHERE send = 1 AND url = ? AND handle = ?;');
   my $toqueue =
     $dbh->prepare('INSERT INTO queue (handle, jid, body) VALUES (?, ?, ?);');
 
@@ -528,7 +528,7 @@ sub dispatch_feeds {
     $fdsent->execute($url, $handle);
   };
   warn "Errors: $tosend->err" if $tosend->err;
-  $dbh->commit; # or $dbh->rollback; 
+  $dbh->commit; # or $dbh->rollback;
   return;
 }
 
@@ -540,7 +540,7 @@ sub flush_queue {
   $queue->execute($jid);
   my ($count) = $queue->fetchrow_array;
   return unless $count;
-  my $body = "You have $count feeds unread. Tell me \"getqueue\" if you want to send them all, or \"deletequeue\" if you want me to delete them. You can issue these commands at any time"; 
+  my $body = "You have $count feeds unread. Tell me \"getqueue\" if you want to send them all, or \"deletequeue\" if you want me to delete them. You can issue these commands at any time";
   $contact->make_message( body => $body, type => 'chat')->send($con);
 }
 
@@ -570,7 +570,7 @@ sub show_last_feeds {
   my ($form, $jid, $dbh, $handle) = @_;
   return unless $handle;
   my $show = $dbh->prepare('SELECT handle, title, body, url, date FROM feeditems
-                            WHERE handle = ? ORDER BY date DESC LIMIT 3');
+			    WHERE handle = ? ORDER BY date DESC LIMIT 3');
   $show->execute($handle);
   my @replies;
   while (my @feed = $show->fetchrow_array) {
@@ -584,7 +584,7 @@ sub show_all_feeds {
   my ($form, $jid, $dbh, $handle) = @_;
   return unless $handle;
   my $all = $dbh->prepare('SELECT title, url FROM feeditems
-                            WHERE handle = ? ORDER BY date');
+			    WHERE handle = ? ORDER BY date');
   $all->execute($handle);
   my $reply;
   while (my @title = $all->fetchrow_array) {
@@ -640,4 +640,3 @@ it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
 
 =cut
-
