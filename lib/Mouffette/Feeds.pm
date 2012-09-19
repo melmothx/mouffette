@@ -441,8 +441,8 @@ sub parse_html {
 	next if $dontsavelinks; # breakout
 	# save the links
 	if (my $link = $attrs->{href}) {
-	  push @links,       " [" . $linkindex . "] " . $link;
-	  push @linksqueue,  " [" . $linkindex . "] ";
+	  push @links,       "[" . $linkindex . "] " . $link;
+	  push @linksqueue, " [" . $linkindex . "] ";
 	  $linkindex++;
 	}
       }
