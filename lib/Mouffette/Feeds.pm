@@ -195,7 +195,7 @@ sub validate_feed {
       };
       # and it parses cleanly
       return $form->("Invalid feed") unless $feed;
-      my $feedtitle = parse_html($feed->title);
+      my $feedtitle = parse_html($feed->title, 1);
       my $sthfeed =
 	$dbh->prepare('INSERT INTO feeds (handle, url, title) VALUES (?,?,?);');
       $sthfeed->execute($handle, $url, $feedtitle);
@@ -348,7 +348,7 @@ sub xml_feed_parse {
   foreach my $entry ($feed->get_item()) {
     # HERE WE HAVE A PROBLEM BECAUSE SOME BUGGY FEEDS HAVE THE SAME LINK
     my $link  = $entry->link() || " ";
-    my $title = parse_html($entry->title()) || " ";
+    my $title = parse_html($entry->title(), 1) || " ";
     my $date = $entry->pubDate();
     my $realdate = 0;
     if ($date) {
@@ -395,9 +395,20 @@ sub _feed_make_hash {
   return sha1_hex($item->{handle} . $item->{title} . $item->{url});
 }
 
+
+
 # our parser
+
+my $inlinetags = qr{
+		     ^(
+		      a|abbr|acronym|b|basefont|bdo|big|cite|code|dfn|em|font|
+		      i|img|input|kbd|label|q|s|samp|select|small|span|strike|
+		      strong|sub|sup|sub|textarea|tt|u|var
+		    )$
+		 }x;
+
 sub parse_html {
-  my $html = shift;
+  my ($html, $dontsavelinks) = @_;
   return " " unless $html;
   if (ref $html eq "HASH") {
     my $tree = $treewriter->write($html);
@@ -408,7 +419,7 @@ sub parse_html {
   #  warn "Parsing ", Dumper($html);
   my $p = HTML::PullParser->new(
 				doc   => $html,
-				start => '"S", tagname',
+				start => '"S", tagname, attr',
 				end   => '"E", tagname',
 				text  => '"T", dtext',
 				empty_element_tags => 1,
@@ -417,28 +428,56 @@ sub parse_html {
 				ignore_elements => [qw(script style)]
 			       ) or return undef;
   my @text;
+  my @links;
+  my @linksqueue;
+  my $linkindex = 1;
   while (my $token = $p->get_token) {
     my $type = shift @$token;
+
+    # start tag
     if ($type eq 'S') {
-      my $tag = shift @$token;
-      if ($tag =~ m/^(div|p|br)$/s) {
+      my ($tag, $attrs) = @$token;
+      if ($tag =~ m/$inlinetags/s) {
+	next if $dontsavelinks; # breakout
+	# save the links
+	if (my $link = $attrs->{href} || $attrs->{src}) {
+	  push @links,       " [" . $linkindex . "] " . $link;
+	  push @linksqueue,  " [" . $linkindex . "] ";
+	  $linkindex++;
+	}
+      }
+      elsif ($tag eq 'li') {
+	push @text, ' * ';
+      }
+      else {
 	push @text, "\n";
       }
-    } elsif ($type eq 'E') {
+    }
+    # end tag
+    elsif ($type eq 'E') {
       my $tag = shift @$token;
-      if ($tag =~ m/^(div|p|br)$/s) {
+      # empty the links queue at the first ending tag
+      while (@linksqueue) {
+	push @text, shift @linksqueue;
+      }
+      unless ($tag =~ m/$inlinetags/s) {
 	push @text, "\n";
       }
-    } elsif ($type eq 'T') {
+    }
+    # text
+    elsif ($type eq 'T') {
       my $txt = shift @$token;
       $txt =~ s/\s+/ /;
       push @text, $txt;
-    } else {
+    }
+    # wtf?
+    else {
       warn "unknon type passed in the parser\n";
     }
   }
-  my $result = join("", @text);
+  my $result = join("", @text) . "\n" . join("\n", @links) . "\n";
   undef @text;
+  undef @links;
   $result =~ s/\n{2,}/\n/gs;
   return $result;
 };
