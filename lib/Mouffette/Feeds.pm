@@ -440,7 +440,7 @@ sub parse_html {
       if ($tag =~ m/$inlinetags/s) {
 	next if $dontsavelinks; # breakout
 	# save the links
-	if (my $link = $attrs->{href} || $attrs->{src}) {
+	if (my $link = $attrs->{href}) {
 	  push @links,       " [" . $linkindex . "] " . $link;
 	  push @linksqueue,  " [" . $linkindex . "] ";
 	  $linkindex++;
@@ -475,7 +475,10 @@ sub parse_html {
       warn "unknon type passed in the parser\n";
     }
   }
-  my $result = join("", @text) . "\n" . join("\n", @links) . "\n";
+  my $result = join("", @text);
+  if ((@links) and (! $dontsavelinks)) {
+    $result .= "\n" . join("\n", @links) . "\n";
+  }
   undef @text;
   undef @links;
   $result =~ s/\n{2,}/\n/gs;
