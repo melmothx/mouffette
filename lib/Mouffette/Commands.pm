@@ -89,10 +89,12 @@ my %commands = (
 
 sub parse_cmd {
   my ($con, $msg, $dbh) = @_;
-  my @args = split(/\s+/, $msg->any_body);
+  my $msgtxt = $msg->any_body;
+  return unless $msgtxt;
+  my @args = split(/\s+/, $msgtxt);
   my $cmd = shift @args;
   my $jid = bare_jid($msg->from);
-
+  return unless $jid;
   # ignore external messages 
   unless (jid_is_in_roster($con, $jid)) {
     ts_print("External request from $jid, ignoring");
