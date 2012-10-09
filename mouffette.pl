@@ -49,6 +49,13 @@ my $conf = LoadFile($ARGV[0]);
 # INITIALIZATION
 pid_print("bot.pid");
 
+# set the user agent if the config says so
+if ($conf->{bot}->{UserAgent}) {
+  Mouffette::Feeds::http_request_set_ua($conf->{bot}->{UserAgent});
+}
+
+debug_print("Using this header for HTTP requests: ", Dumper(Mouffette::Feeds::_http_our_header()));
+
 # the DB
 my $db = $conf->{bot}->{db};
 

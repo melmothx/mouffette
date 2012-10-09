@@ -44,13 +44,20 @@ use Mouffette::Utils qw/debug_print ts_print/;
 use XML::TreePP;
 my $treewriter = XML::TreePP->new();
 
-sub _http_our_header {
-  my $header = {
+my $http_request_header = {
 		'User-Agent' => "Mouffette RSS->XMPP gateway v.0.3 https://github.com/melmothx/mouffette/blob/master/UserAgent.md",
 		'Accept-Encoding' => 'gzip',
 	       };
-  return $header;
+
+sub _http_our_header {
+  return $http_request_header;
 };
+
+sub http_request_set_ua {
+  my $ua = shift;
+  return unless $ua;
+  $http_request_header->{'User-Agent'} = $ua;
+}
 
 sub search_feeds {
   my ($form, $jid, $dbh, @args) = @_;
